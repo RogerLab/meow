@@ -4,15 +4,16 @@ cseries.dir <- ""
 functions.dir <- ""
 ##------------------------------------------------------------------------------
 
-library(ape)
-library(phangorn)
+require("ape",quietly=TRUE)
+require("phangorn",quietly=TRUE)
+require("quadprog",quietly=TRUE)
+
 # Make sure mammal_functions and pm_functions are in the same directory as this program
 source(paste0(functions.dir,"mammal_functions")) 
 source(paste0(functions.dir,"pm_functions"))
 
 ##------------------------------------------------------------------------------
 ## PM (MAMMaL Extension) - adds Entropy, Upper/Lower partitions, Invariable flag, and includes low rates
-require("quadprog",quietly=TRUE)
 
 ## External programs
 dgpe <- paste(bindir,"dgpe",sep="")

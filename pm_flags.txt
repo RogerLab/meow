@@ -1,0 +1,56 @@
+PM is an extension of MAMMaL, and some input flags are different. 
+Here is a list of all flags accepted by PM and whether or not they are required:
+
+-s seqfile (required) : name of input sequence file 
+
+-p partition_type (optional) : method to use to partition the sequence data (Default: "E")
+	accepted values:
+	"E" : partition by entropy
+	"R" : partition by rates (method used in MAMMaL)
+	"K" : partition by K-eff value
+
+-t treefile (optional) : name of input tree file 
+	if not set and partition type is "R", a neighbour joining tree will be generated using the LG algorithm
+
+-c nclasses (optional) : number of frequency classes to use in both the high and low sequence partitions
+
+-ch nhigh (required if -c not set) : number of frequency classes to use in the high sequence partition
+
+-cl nlow (required if -c not set) : number of frequency classes to use in the low sequence partition
+
+-o outfile (optional) : name of output file (Default: esmodel.nex)
+
+-q quantile (optional) : quantile to use for partitioning data (Default: 0.75)
+
+-C penalty (optional) : the penalty parameter to use (Default: 1.0e-10)
+
+-f cluster_type (optional) : clustering algorithm to use (Default: "H"*)
+	accepted values:
+	"C" : c-series
+	"H" : hierarchical clustering 
+
+-log log_type (optional) : method to use for outputting program  logs (Default: "B")
+	accepted values:
+	"N" : Do not output any logs
+	"F" : Output logs to "pm_output.log"
+	"X" : Include program logs in the .nex file
+	"B" : Put logs in both "pm_output.log" and the output .nex file
+
+-lm min_weight (optional) : sets the minimum likelihood weight (Default: 1.0e-10)
+
+-I (optional) : remove invariant sites from sequence data before processing it
+
+-m (optional) : don't output the .nex file
+
+-d (optional) : use +F
+
+-l (optional) : don't use likelihood weighting 
+
+-pf (optional) : don't delete the low and high sequence files
+
+-ff (optional) : don't delete the estimated-frequencies files
+
+-suf (optional) : use a random suffix for output files, allowing running multiple instances at once
+
+
+* "C" if both -ch and -cl are a multiple of 10 (including 0)
