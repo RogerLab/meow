@@ -1,0 +1,351 @@
+#!/usr/bin/env Rscript
+##------------------------------------------------------------------------------
+
+source("pm_functions")
+library(testthat)
+library(phangorn)
+options(warn=1)
+
+if(!file.exists("pmsf-2-seqfile")) stop("Must provide pmsf-2-seqfile")
+seqfile <- "pmsf-2-seqfile"
+
+# unit tests for PM functions
+
+test_that("GetEntropy",{
+  # zero entropy
+  expect_equal(getEntropy(c(1,1,1,1,1)),getEntropy(c(1,1,1))) 
+  # same input, different order
+  expect_equal(getEntropy(c(1,2,3,4,5)),getEntropy(c(5,4,3,2,1)))
+  # different input
+  expect_gt(getEntropy(c(0.5,0.5,0.5)),getEntropy(c(65,65,65)))
+  expect_lt(getEntropy(c(10,9,8,7,6)),getEntropy(c(1,2,3,4,5)))
+  # remove zeroes from list
+  expect_equal(getEntropy(c(1,2,3)),getEntropy(c(1,0,2,0,3,0)))
+  # same sum, less variation
+  expect_gt(getEntropy(c(0.2,0.2,0.2,0.2,0.2)),getEntropy(c(0.9,0.02,0.02,0.02,0.02,0.02)))
+})
+
+test_that("GetEffectiveK",{
+  # nothing
+  expect_equal(getEffectiveK(c(1)),1)
+  # expected output
+  expect_equal(getEffectiveK(c(0.5,0.5,0,0)),2)
+  expect_equal(getEffectiveK(c(0.25,0.25,0.25,0.25)),4)
+  # same input
+  expect_equal(getEffectiveK(c(0.1,0.2,0.3,0.4)),getEffectiveK(c(0.4,0.3,0.2,0.1)))
+  # bounds
+  expect_lt(getEffectiveK(c(0.1,0.2,0.3,0.4)),4)
+  expect_lt(getEffectiveK(rep(1/20,20)),20)
+  expect_gt(getEffectiveK(c(0.3,0.3,0.4)),2)
+})
+
+test_that("SeqCount",{
+  count <- seqCount(seqfile)
+  f <- file(seqfile,"r")
+  h <- readLines(f,n=1); close(f)
+  # function should have the same answer as the file header
+  expect_identical(h,paste(count[1],count[2])) 
+  
+  # construct valid & invalid file to test that they are accepted or rejected properly
+  f <- file("bad-seqfile")
+  g <- file("good-seqfile")
+  writeLines(c("2 3","Test ABC","Test2 ABCD"), f); close(f)
+  writeLines(c("2 4", "Test ABCD", "Test2 EFGH"), g); close(g)
+  expect_error(seqCount("bad-seqfile"), "*[conflicting site count]*")
+  expect_identical(seqCount("good-seqfile"), c(2,4))
+  
+  did.remove <- file.remove(c("good-seqfile","bad-seqfile"))
+})
+
+test_that("SiteProportions",{
+  # test frequencies
+  split <- function(str) {return(unlist(strsplit(str,"")))}
+  test1 <- siteProportions(split("AAA"))
+  test2 <- siteProportions(split("KMFAAKMMMFFRTTTDDR"))
+  test3 <- siteProportions(split("E---EEE---EE--A-T"))
+  test4 <- siteProportions(split("-----------------"))
+  test5 <- siteProportions(split("ARNDCQEGHILKMFPSTWYV"))
+  
+  expect_equal(test1[which(AA == 'a')], 1)
+  expect_identical(test1[-which(AA == 'a')], rep(0,19))
+  
+  expect_equal(test2[which(AA == 'k')], 2/18)
+  expect_equal(sum(test2[-which(AA == 'k')]), 16/18)
+
+  expect_equal(test3[which(AA == 'e')], 6/8)
+  expect_equal(sum(test3), 1)
+  
+  expect_identical(test4,rep(0,20))
+  
+  expect_identical(test5, rep(1/20,20))
+  
+  # test non-frequencies
+  test1 <- siteProportions(split("AAA"), freq=F)
+  test2 <- siteProportions(split("KMFAAKMMMFFRTTTDDR"), freq=F)
+  test3 <- siteProportions(split("E---EEE---EE--A-T"), freq=F)
+  test4 <- siteProportions(split("-----------------"), freq=F)
+  test5 <- siteProportions(split("ARNDCQEGHILKMFPSTWYV"), freq=F)
+  
+  expect_equal(test1[which(AA == 'a')], 3)
+  expect_identical(test1[-which(AA == 'a')], rep(0,19))
+  
+  expect_equal(test2[which(AA == 'm')], 4)
+  expect_equal(sum(test2), nchar("KMFAAKMMMFFRTTTDDR"))
+  
+  expect_equal(test3[which(AA == 'e')], 6)
+  expect_false(sum(test3) == nchar("E---EEE---EE--A-T"))
+  
+  expect_identical(test4,rep(0,20))
+  
+  expect_identical(test5, rep(1,20))
+})
+
+test_that("Partition", {
+  
+  count <- function(fn) {
+    f <- file(fn,"r")
+    c <- unlist(strsplit(readLines(f,n=1)," ")); close(f)
+    return(as.numeric(c[2]))
+  }
+  seqmean <- function(sf,func) {
+    d <- read.aa(sf)
+    p <- apply(d, 2, siteProportions)
+    return(mean(apply(p, 2, func)))
+  }
+  
+  # default
+  partition(seqfile)
+  low <- paste0(seqfile,".lowentropy"); high <- paste0(seqfile,".highentropy")
+  expect_true(file.exists(low))
+  expect_true(file.exists(high))
+  expect_equal(count(seqfile), count(low) + count(high))
+  expect_gt(seqmean(high,getEntropy), seqmean(low,getEntropy))
+  did.remove <- file.remove(c(low,high))
+  
+  # with k-eff
+  partition(seqfile,func=getEffectiveK)
+  low <- paste0(seqfile,".lowkeff"); high <- paste0(seqfile,".highkeff")
+  expect_true(file.exists(low))
+  expect_true(file.exists(high))
+  expect_equal(count(seqfile), count(low) + count(high))
+  expect_gt(seqmean(high,getEffectiveK), seqmean(low,getEffectiveK))
+  did.remove <- file.remove(c(low,high))
+  
+  # with suffix
+  tmp.seq <- file("tmp.seq")
+  writeLines(c("5 10","Test1 AEAEAEAEAE","Test2 KK-KKKK-KK","Test3 FFFF---FFF","Test4 AE---EMTAE","Test5 HQQQQQ-QQH"), tmp.seq)
+  close(tmp.seq)
+  partition("tmp.seq",q=0,suffix="123")
+  expect_true(file.exists("tmp.seq.highentropy123"))
+  expect_equal(count("tmp.seq.highentropy123"), 10)
+  did.remove <- file.remove(c("tmp.seq","tmp.seq.highentropy123"))
+})
+
+test_that("SortSequenceFile",{
+  sortSequenceFile(seqfile)
+  newfile <- paste0(seqfile,".s")
+  expect_true(file.exists(newfile))
+  
+  # read phydat for old and new files
+  d1 <- read.aa(seqfile)
+  d2 <- read.aa(newfile)
+  
+  # check that they have the same length and content
+  expect_identical(dim(d1),dim(d2))
+  sitesnew <- apply(d2, 2, function(x){return(paste0(x,collapse=""))})
+  matches <- apply(d1, 2, function(x){return(paste0(x,collapse="") %in% sitesnew)})
+  expect_false(FALSE %in% matches)
+  
+  did.remove <- file.remove(newfile)
+  
+  # check a random permutation to see if we get the same order
+  if(file.exists("pmsf-2-seqfile-shuffled")){
+    sortSequenceFile("pmsf-2-seqfile-shuffled",suffix="321")
+    d3 <- read.aa("pmsf-2-seqfile-shuffled.s321")
+    sitesnew_2 <- apply(d3, 2, function(x){return(paste0(x,collapse=""))})
+    matches <- apply(d1, 2, function(x){return(paste0(x,collapse="") %in% sitesnew_2)})
+    expect_false(FALSE %in% matches)
+    differences <- 0
+    valid <- TRUE
+    for(i in 1:length(sitesnew_2)){
+      if(sitesnew_2[i] != sitesnew[i]) { # if two sites differ, do a manual check on them
+        differences <- differences + 1;
+        # make sure they're tied in sort value; otherwise they should be sorted the same
+        sortValue <- function(site){
+          props <- siteProportions(unlist(strsplit(site,"")))
+          entropy <- getEntropy(props)
+          s <- 0
+          for(i in 1:20) { s <- s + 2^(-i) * props[i] }
+          return(entropy + s)
+        }
+        if(sortValue(sitesnew[i]) != sortValue(sitesnew_2[i])) valid <- FALSE
+      }
+    }
+    expect_true(valid)
+    expect_lt(differences/length(sitesnew), 0.25) # arbitrary threshold: expect at least 75% of the sites to be a match
+    did.remove <- file.remove("pmsf-2-seqfile-shuffled.s321")
+  } else warning("Cannot run permutation test on SortSequenceFile: pmsf-2-seqfile-shuffled does not exist")
+  
+}) 
+
+test_that("ExtractLowRates",{
+  if(file.exists("test_rates.dat")){
+    
+    extractLowRates(seqfile, "test_rates.dat", 0.75)
+    a <- read.aa(seqfile); b <- read.aa(paste0(seqfile,".lowrate"))
+    ratio <- dim(b)[2] / dim(a)[2]
+    expect_lt(abs(ratio - 0.75), 0.01) # check that 75% of the sites are in the new sequence file
+    
+  } else warning("Cannot run sequence file test on ExtractLowRates: test_rates.dat does not exist")
+  
+  tmp.seq <- file("tmp.rates")
+  writeLines(c("0.001","0.025","0.055","0.101","0.263","0.526","0.965","1.653","2.630","3.000"),tmp.seq) # arbitrary numbers
+  close(tmp.seq);
+  tmp.seq <- file("tmp.seq")
+  writeLines(c("5 10","Test1 AEAEAEAEAE","Test2 KK-KKKK-KK","Test3 FFFF---FFF","Test4 AE---EMTAE","Test5 HQQQQQ-QQH"), tmp.seq)
+  close(tmp.seq);
+  
+  extractLowRates("tmp.seq","tmp.rates",0.5)
+  expect_true(file.exists("tmp.seq.lowrate"))
+  f <- file("tmp.seq.lowrate","r"); l <- readLines(f,n=2)
+  expect_equal(nchar(unlist(strsplit(l[2]," "))[2]), 5) # should have 5 sites in the new file
+  close(f)
+  
+  extractLowRates("tmp.seq","tmp.rates",0.7,suffix="123")
+  expect_true(file.exists("tmp.seq.lowrate123"))
+  f <- file("tmp.seq.lowrate123","r"); l <- readLines(f,n=2)
+  expect_equal(nchar(unlist(strsplit(l[2]," "))[2]), 7) # should have 7 sites in the new file
+  close(f)
+  
+  did.remove <- file.remove(c("tmp.seq","tmp.rates","tmp.seq.lowrate","tmp.seq.lowrate123"))
+})
+
+test_that("RemoveSuffix",{
+  # remove suffix from the end of a filename
+  pre <- "test3498"; suf <- "test245"
+  word <- paste0(pre,suf);
+  expect_equal(removeSuffix(word,suf),pre);
+  # remove suffix from the middle of a filename
+  suf <- "43875438"
+  newWord <- paste0("hello",suf,"goodbye")
+  expect_equal(removeSuffix(newWord,suf),"hellogoodbye")
+})
+
+test_that("RemoveEmptySites",{
+  # test with no empty sites
+  tmp.seq <- file("tmp.seq")
+  writeLines(c("5 10","Test1 AEAEAEAEAE","Test2 KK-KKKK-KK","Test3 FFFF---FFF","Test4 AE---EMTAE","Test5 HQQQQQ-QQH"), tmp.seq)
+  close(tmp.seq)
+  n <- removeEmptySites("tmp.seq")
+  expect_equal(n, c(0,10))
+  expect_false(file.exists("tmp.seq.e"))
+  did.remove <- file.remove("tmp.seq")
+  
+  # test with one empty site at the end
+  tmp.seq <- file("tmp.seq")
+  writeLines(c("5 10","Test1 AEAEAEAEA-","Test2 KK-KKKK-K-","Test3 FFFF---FF-","Test4 AE---EMTA-","Test5 HQQQQQ-QQ-"), tmp.seq)
+  close(tmp.seq)
+  n <- removeEmptySites("tmp.seq")
+  expect_equal(n, c(1,9))
+  expect_true(file.exists("tmp.seq.e"))
+  f <- file("tmp.seq.e","r")
+  l <- readLines(f)
+  close(f)
+  found <- FALSE
+  for(line in l) {
+    if(substr(line,length(line),length(line)) == "-") found <- TRUE
+  }
+  expect_false(found)
+  did.remove <- file.remove(c("tmp.seq","tmp.seq.e"))
+  
+  # test with multiple empty sites
+  tmp.seq <- file("tmp.seq")
+  writeLines(c("5 10","Test1 AE-E-E-EAE","Test2 KK-K-K--KK","Test3 FF-F---FFF","Test4 AE---E-TAE","Test5 HQ-Q-Q-QQH"), tmp.seq)
+  close(tmp.seq)
+  n <- removeEmptySites("tmp.seq",suffix="678")
+  expect_equal(n, c(3,7))
+  expect_true(file.exists("tmp.seq.e678"))
+  f <- file("tmp.seq.e678","r")
+  l <- readLines(f)
+  close(f)
+  expect_true("Test1 AEEEEAE" %in% l)
+  expect_true("Test2 KKKK-KK" %in% l)
+  did.remove <- file.remove(c("tmp.seq","tmp.seq.e678"))
+})
+
+test_that("DetectInvariant",{
+  # test with no invariant sites
+  tmp.seq <- file("tmp.seq")
+  writeLines(c("5 10","Test1 AEAEAEAEAE","Test2 KK-KKKK-KK","Test3 FFFF---FFF","Test4 AE---EMTAE","Test5 HQQQQQ-QQH"), tmp.seq)
+  close(tmp.seq)
+  n <- detectInvariant("tmp.seq")
+  expect_equal(n, c(0,10))
+  expect_true(file.exists("tmp.seq.i"))
+  expect_identical(read.aa("tmp.seq"),read.aa("tmp.seq.i"))
+  did.remove <- file.remove(c("tmp.seq","tmp.seq.i"))
+  
+  # test with one invariant site at the end
+  tmp.seq <- file("tmp.seq")
+  writeLines(c("5 10","Test1 AEAEAEAEAV","Test2 KK-KKKK-KV","Test3 FFFF---FFV","Test4 AE---EMTAV","Test5 HQQQQQ-QQV"), tmp.seq)
+  close(tmp.seq)
+  n <- detectInvariant("tmp.seq")
+  expect_equal(n, c(1,9))
+  expect_true(file.exists("tmp.seq.i"))
+  f <- file("tmp.seq.i","r")
+  l <- readLines(f)
+  close(f)
+  found <- FALSE
+  for(line in l) {
+    if(grepl("V",line)) found <- TRUE
+  }
+  expect_false(found)
+  did.remove <- file.remove(c("tmp.seq","tmp.seq.i"))
+  
+  # test with multiple invariant sites
+  tmp.seq <- file("tmp.seq")
+  writeLines(c("5 10","Test1 AEVEWEYEAE","Test2 KKVKWKY-KK","Test3 FFVFW-YFFF","Test4 AEV-WEYTAE","Test5 HQVQWQYQQH"), tmp.seq)
+  close(tmp.seq)
+  n <- detectInvariant("tmp.seq",suffix="678")
+  expect_equal(n, c(3,7))
+  expect_true(file.exists("tmp.seq.i678"))
+  f <- file("tmp.seq.i678","r")
+  l <- readLines(f); l <- l[2:length(l)] # strip header
+  close(f)
+  valid <- TRUE
+  for(line in l){
+    if(grepl("V",line) | grepl("W",line) | grepl("Y",line)) valid <- FALSE
+    if(nchar(line) != 13) valid <- FALSE
+  }
+  expect_true(valid)
+  did.remove <- file.remove(c("tmp.seq","tmp.seq.i678"))
+})
+
+test_that("GenerateTree",{
+  generateTree(seqfile)
+  expect_true(file.exists(paste0(seqfile,".tree")))
+  expect_true(verifyTree(paste0(seqfile,".tree")))
+  expect_false(file.exists(paste0(seqfile,".tree.tmp")))
+  did.remove <- file.remove(paste0(seqfile,".tree"))
+})
+
+test_that("VerifyTree",{
+  f <- file("tmp.tree")
+  writeLines(c("(One:0.3434,((Two:0.0151,Three:0.345923):0.353785,(Four:0.01124,Five:0.33333):0.42758):0.4528);"), f)
+  expect_true(verifyTree("tmp.tree"))
+  expect_false(file.exists("tmp.tree.tmp"))
+  writeLines(c("(One:0.3434,((Two:0.0151,Three:-0.345923):0.353785,(Four:0.01124,Five:-0.33333):0.42758):0.4528);"), f)
+  close(f)
+  expect_false(verifyTree("tmp.tree"))
+  expect_true(file.exists("tmp.tree.tmp"))
+  t <- read.tree("tmp.tree.tmp")
+  el <- as.numeric(t$edge.length)
+  valid <- TRUE
+  check <- c(0.3434, 0.0151, 0.353785, 0.01124, 0.42758, 0.0)
+  v <- lapply(check, function(x){return(x %in% el)})
+  expect_false(FALSE %in% v)
+  check <- c(-0.345923, -0.33333)
+  v <- lapply(check, function(x){return(x %in% el)})
+  expect_false(TRUE %in% v)
+  
+  did.remove <- file.remove(c("tmp.tree","tmp.tree.tmp"))
+})

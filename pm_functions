@@ -1,0 +1,308 @@
+#!/usr/bin/env Rscript
+##------------------------------------------------------------------------------
+
+# List of amino acids for use in the program (shorthand: AA)
+AminoAcids <- AA <- c("a","r","n","d","c","q","e","g","h","i","l","k","m","f","p","s","t","w","y","v")
+
+# getEntropy(v) : returns the entropy value for a vector set v
+# entropy is defined as -sum(v * log(v))
+getEntropy <- function(v)
+{
+  if(0 %in% v) { v <- v[-which(v==0)] } # remove 0 values from the vector (log(0) is undefined)
+  return(sum(-v * log(v)))
+}
+
+# getEffectiveK(v) : returns the effective number (K_eff) of items in a list based on their proportions
+# e.g. [0.5,0.5,0,0] returns 2, and [0.25,0.25,0.25,0.25] returns 4
+getEffectiveK <- function(v)
+{
+  v <- v/sum(v) # get proportion of each v[i] 
+  return(1/sum(v^2))
+}
+
+# seqCount(seqfile) : counts the number of sequences and sites and outputs the result. stops the program if conflicting site counts are detected
+seqCount <- function(seqfile)
+{
+  f <- file(seqfile,open="r")
+  i <- 0
+  siteLength <- 0
+  while(TRUE) {
+    line <- readLines(f, n=1)
+    i <- i+1
+    
+    # Leave loop if EOF is reached
+    if(length(line) == 0) {
+      break
+    # Skip header line
+    } else if(i==1) {
+      next
+      
+    } else {
+      line <- unlist(strsplit(line," "))[2] # strip taxa names from the lines
+      if(siteLength==0) {
+        siteLength <- nchar(line)
+      } else {
+        # Stop program if we detect conflicting site counts
+        if(nchar(line) != siteLength) {
+          stop(paste("Detected conflicting site count at line",i,"of file. Stopping program."))
+        }
+      }
+    }
+  }
+  close(f)
+  
+  return(c(i-2,siteLength))
+}
+
+# siteProportions(site) : returns a vector containing the proportionality of each amino acid type in the provided site vector
+# freq=T: each acid has corresponding percentage; freq=F: each acid has corresponding occurrence count
+siteProportions <- function(site,freq=T)
+{
+  # remove missing amino acids
+  if("-" %in% site) { 
+    site <- site[-which(site=="-")] 
+  } 
+  
+  # make lower case
+  if(grepl("[A-Z]",paste0(site,collapse=""))){
+    for(i in 1:length(site)){
+      site[i] <- tolower(site[i])
+    }
+  }
+  
+  siteTable <- unlist(table(site,exclude=0)) # aggregate by converting to table
+  labels <- rownames(as.matrix(siteTable)) # retrieve labels for included amino acid types
+  
+  if(freq) {
+    siteTableProportions <- siteTable / sum(siteTable)
+  }
+  
+  returnVector <- rep(0,20) # list of 20 amino acids
+  for(i in 1:length(siteTable)) {
+    type <- which(labels[i] == AminoAcids)
+    if(freq) {
+      returnVector[type] <- siteTableProportions[i]
+    } else {
+      returnVector[type] <- siteTable[i]
+    }
+  }
+  
+  return(returnVector)
+}
+
+# partition(seqfile) : outputs two sequence files partitioned based on the q-value (default 0.75)
+# removes empty sites (all -'s)
+# the value of func determines what algorithm to use for partitioning. getEntropy is default; getEffectiveK is the other option
+partition <- function(seqfile,q=0.75,makefile=T,func=getEntropy,suffix="")
+{
+  data <- read.aa(seqfile) # read in amino acid data from input file
+  n <- nrow(data) # number of sequences
+  
+  proportions <- apply(data,2,siteProportions) # get site proportions from the data
+  sorted <- apply(proportions,2,func) # feed proportion data into "sorting" algorithm (def. getEntropy)
+  ptile <- quantile(sorted,q) # get the q-th percentile of the modified data (def. 75th)
+  
+  lowerPartition <- which(sorted<ptile)
+  upperPartition <- which(sorted>=ptile)
+  
+  if(makefile) {
+    
+    # filetype based on algorithm used
+    if(identical(func, getEntropy)) {
+      ftype <- "entropy"
+    } else if(identical(func, getEffectiveK)) {
+      ftype <- "keff"
+    } else {
+      ftype <- ""
+    }
+    dp <- data[,lowerPartition]
+    if(length(dp) > 0){
+      dps <- phyDat(dp, type = "AA")
+      write.phyDat(dps, paste0(removeSuffix(seqfile,suffix),'.low',ftype,suffix),format = "interleaved", nbcol = 6, colsep = " ")
+    }
+    
+    dp <- data[,upperPartition]
+    if(length(dp) > 0){
+      dps <- phyDat(dp, type = "AA")
+      write.phyDat(dps, paste0(removeSuffix(seqfile,suffix),'.high',ftype,suffix),format = "interleaved", nbcol = 6, colsep = " ")
+    }
+  }
+}
+
+# sortSequenceFile(seqfile) : given a sequence file, rearranges the sites based on entropy and site proportions
+sortSequenceFile <- function(seqfile,suffix="")
+{
+  data <- read.aa(seqfile) # read in amino acid data from input file
+  n <- nrow(data) # number of sequences
+  
+  proportions <- apply(data,2,siteProportions) # get site proportions from the data
+  entropy <- apply(proportions,2,getEntropy) # calculate sitewise entropy
+  proportions <- apply(proportions,2,function(v){ # convert proportions matrix to a vector of numbers
+    s <- 0
+    for(i in 1:20){
+      # given a 20-dimensional frequency vector v, return a pseudorandom number calculated from its values
+      s <- s + 2^(-i) * v[i]
+    }
+    return(s)
+  })
+  # add proportion values to each entropy value (mostly to differentiate the zeroes)
+  j <- 0
+  entropy <- unlist(lapply(entropy,function(x){j <<- j+1; return(x + proportions[j])}))
+  
+  sortTable <- cbind(1:length(entropy),entropy) 
+  sortTable <- sortTable[order(sortTable[,2]),] # sort the list
+  
+  data <- data[,sortTable[,1]] # reorder data based on the sorted table
+  
+  filename <- paste0(removeSuffix(seqfile,suffix),".s",suffix)
+  seq <- phyDat(data, type = "AA")
+  write.phyDat(seq,file = filename,format = "interleaved", nbcol = 6, colsep = " ")
+}
+
+# extractLowRates(seqfile,rates,quant) : given a sequence file, rates file and quantile, output a new sequence file with only the low rates
+# relies on the existence of the rates file which is created by dgpe
+extractLowRates <- function(seqfile,rates,quant,suffix="")
+{
+  outfile <- paste0(removeSuffix(seqfile,suffix),".lowrate",suffix)
+  if(quant > 0) {
+    TT <- unlist(as.vector(read.table(file=rates)))
+    q <- quantile(TT,quant)
+    lowSites <- which(TT<q)
+  
+    data <- read.aa(seqfile)
+    data <- data[,lowSites]
+    seq <- phyDat(data, type = "AA")
+    write.phyDat(seq,file = outfile,format = "interleaved", nbcol = 6, colsep = " ")
+  } else {
+    out <- file(outfile)
+    writeLines("0 0",out)
+    close(out)
+  }
+}
+
+# removeSuffix(fname,suffix) : returns a copy of a filename with the suffix removed
+removeSuffix <- function(fname,suffix) {
+  if(suffix == "") return(fname)
+  n <- unlist(gregexpr(suffix,fname))
+  if(n>0) {
+    left <- substr(fname,1,n-1)
+    right <- substr(fname,n+nchar(suffix),nchar(fname))
+    return(paste0(left,right)) 
+  } else return(fname)
+}
+
+# removeEmptySites(seqfile) : given a sequence file, outputs another sequence file with all empty sites removed
+removeEmptySites <- function(seqfile,suffix="")
+{
+  data <- read.aa(seqfile) # read in amino acid data from sequence file
+  n <- ncol(data)
+  checkEmpty <- apply(data,2,function(x){paste0(x,collapse="") == paste0(rep("-",nrow(data)),collapse="")})
+  emptySites <- which(checkEmpty)
+  nempty <- length(emptySites)
+  if(nempty > 0) {
+    data <- data[,-emptySites]
+    filename <- paste0(removeSuffix(seqfile,suffix),".e",suffix)
+    seq <- phyDat(data, type = "AA")
+    write.phyDat(seq,file = filename,format = "interleaved", nbcol = 6, colsep = " ")
+  }
+  return(c(nempty,n-nempty))
+}
+
+# detectInvariant(seqfile,output) : detects invariant sites from sequence file; creates a new file with all invariant sites removed if output is TRUE
+detectInvariant <- function(seqfile,output=TRUE,suffix="")
+{
+  data <- read.aa(seqfile) # read in amino acid data from sequence file
+  n <- ncol(data) 
+  
+  propotions <- apply(data,2,siteProportions) # get site proportions from the data
+  entropy <- apply(propotions,2,getEntropy) # get entropy data for each site
+  
+  invariant <- which(entropy<7e-10) 
+  ninvariant <- length(invariant)
+  
+  if(ninvariant > 0 & output) data <- data[,-invariant]
+  
+  if(output) {
+    seq <- phyDat(data, type="AA")
+    filename=paste0(removeSuffix(seqfile,suffix),".i",suffix)
+    write.phyDat(seq, filename, format = "phylip")
+  }
+  
+  return(c(ninvariant,n-ninvariant))
+}
+
+# generateTree(seqfile) : creates a neighbour joining tree from a sequence file using the LG algorithm
+generateTree <- function(seqfile,suffix="")
+{
+  data <- read.aa(seqfile)
+  seq <- phyDat(data, type = "AA")
+  dm <- dist.ml(seq, model="LG")
+  tree <- NJ(dm)
+  filename <- paste0(seqfile,".tree",suffix)
+  write.tree(tree,file=filename)
+}
+
+# verifyTree(treefile) : reads in a phylo tree and returns T if the edge lengths are all valid. Makes a new tree file and returns F if invalid edges are found.
+verifyTree <- function(treefile,suffix="")
+{
+  t <- read.tree(treefile)
+  edges <- t$edge.length
+  overwrite <- FALSE
+  for(i in 1:length(edges)){
+    if(edges[i] < 0) { edges[i] <- 0; overwrite <- TRUE }
+  }
+  if(overwrite){
+    t$edge.length <- edges
+    write.tree(t,file=paste0(treefile,".tmp",suffix))
+    return(FALSE)
+  }
+  return(TRUE)
+}
+
+# addEpsilonToHclust(frs) : given a matrix of hclust centers, add an epsilon value (1.0e-10) to all zeroes and normalize the data
+addEpsilonToHclust <- function(frs)
+{
+  frs <- apply(frs,1:2,function(x){if(x == 0) return(1.0e-10) else return(x)})
+
+  rsums <- apply(frs,1,function(x){return(sum(x))})
+
+  for(i in 1:nrow(frs))
+    frs[i,] <- unlist(lapply(as.vector(frs[i,]),function(x){return(x/rsums[i])})) #normalize)
+  
+  return(frs)
+}
+
+# mergeNexFiles(file1,file2,outfile) : given two .nex files, outputs a new merged .nex file with the given outfile name
+mergeNexFiles <- function(file1,file2,outfile)
+{
+  l1 <- readLines(file1)
+  l2 <- readLines(file2)
+  
+  end1 <- which(l1=="")-1
+  end2 <- which(l2=="")-1
+  
+  for(i in 3:end1)
+  {
+    l1[i] <- gsub("ES", "EShigh", l1[i])
+  }
+  for(i in 3:end2)
+  {
+    l2[i] <- gsub("ES", "ESlow", l2[i])
+  }
+  
+  txt <- c("#nexus","begin models;",l1[3:end1],l2[3:end2],"")
+  
+  model <- paste0("frequency ESmodel = FMIX{", paste0("EShighclass",1:length(3:end1),collapse = ","),",", paste0("ESlowclass",1:length(3:end2),collapse = ",")   ,"};")
+  txt <- c(txt,model,"end;")
+  write.table(txt,paste0(outfile,".nex"),quote=F, append = FALSE, sep = " ", dec = ".", row.names = F, col.names = F)
+}
+
+# nexusHeader(file,lines) : adds a header comment at the start of a nexus file
+nexusHeader <- function(fname,lines) {
+  f <- file(fname)
+  content <- readLines(fname)
+  lines <- append("[",c(lines,"]"," "))
+  lines <- append(lines,content)
+  writeLines(lines,f)
+  close(f)
+}

@@ -1,0 +1,63 @@
+#!/usr/bin/env Rscript
+##------------------------------------------------------------------------------
+HclustCenters <- function(x,nclass=21,dmethod="manhattan",
+                          linkage="average",hclust.type="hclust"){
+  if(hclust.type == "hclust"){
+    d <- dist(x,method=dmethod)
+    h <- hclust(d, method=linkage)
+  }else{
+    h <- Rclusterpp.hclust(x,method=linkage,distance=dmethod)
+  }
+  centers <- tapply(x,
+                    list(rep(cutree(h,nclass),ncol(x)), col(x)), mean)
+  return(centers)
+}
+DataFrequencies <- function(seqfile,clean=TRUE,
+                            bindir="~/bio/huaichun/bordor/",suffix=""){
+  out <- paste0("tmp.fr",suffix)
+  system(paste(bindir,"mult-data -s -i ",seqfile," > ",out,sep=""))
+  fr <- matrix(scan(out,quiet=TRUE),ncol=22,byrow=TRUE)
+  fr <- fr[,1:20]/apply(fr[,1:20],1,sum)
+  if(clean) file.remove(out)
+  return(fr)
+}
+OptimizeWeights <- function(Sigma){
+  ## min(-d^T b + 1/2 b^T D b) with the constraints A^T b >= b_0
+  ntaxa <- nrow(Sigma)
+  Amat <- rep(1,ntaxa)
+  Amat <- cbind(Amat, diag(rep(1,ntaxa)))
+  bvec <- c(1,rep(0,ntaxa))
+  l <- solve.QP(Dmat=Sigma*2, dvec=rep(0,ntaxa), Amat=Amat, bvec=bvec)
+  return(list(w=l$solution,v=l$value))
+}
+CalculateWeightsE <- function(seqfile,normalize=FALSE,clean=TRUE,DNA=FALSE,
+                              bindir="~/bio/mix-freq/comp-lik-variance/",suffix=""){
+  cmdline <- paste(bindir,"mammal-sigma",sep="")
+  if(DNA) cmdline <- paste(cmdline,"-D")
+  out <- paste0("tmp.Sigma",suffix)
+  cmdline <- paste(cmdline,"<",seqfile,paste0(">",out))
+  ntaxa <- scan(seqfile,quiet=TRUE,n=1)
+  ## cat(cmdline,"\n")
+  system(cmdline)
+  Sigma <- scan(out,quiet=TRUE)
+  if(Sigma[1]==-1) stop(paste0("The ",Sigma[2]+1,"th and ",Sigma[3]+1,"th sequences had no sites in common when calculating the likelihood weights.\nEither delete one of these sequences or don't use likelihood weighting (option -l)\n"))
+  Sigma <- matrix(Sigma,ncol=ntaxa)
+  l <- OptimizeWeights(Sigma)
+  if(clean) file.remove(out)
+  if(normalize){
+    l$w[l$w<0] <- 0
+    l$w <- ntaxa*l$w/sum(l$w)
+  }
+  return(l)
+}
+CreateIQFreqfile <- function(fr,fname){
+  cat("#nexus\nbegin models;\n",file=fname)
+  for(ic in 1:dim(fr)[1]){
+    cat("frequency ESclass",ic," = ",sep="",file=fname,append=TRUE)
+    cat(fr[ic,],";\n",file=fname,append=TRUE)
+  }
+  cat("\n    frequency ESmodel = FMIX{",sep="",file=fname,append=TRUE)
+  for(ic in 1:(dim(fr)[1]-1))
+    cat("ESclass",ic,",",sep="",file=fname,append=TRUE)
+  cat("ESclass",dim(fr)[1],"};\nend;\n",sep="",file=fname,append=TRUE)
+}
