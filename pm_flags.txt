@@ -38,7 +38,9 @@ Here is a list of all flags accepted by PM and whether or not they are required:
 
 -lm min_weight (optional) : sets the minimum likelihood weight (Default: 1.0e-10)
 
--I (optional) : remove invariant sites from sequence data before processing it
+-ri (optional) : remove invariant sites from sequence data before processing it
+
+-I (optional) : add an extra frequency class for invariant sites in the generated .nex file
 
 -m (optional) : don't output the .nex file
 
@@ -51,6 +53,10 @@ Here is a list of all flags accepted by PM and whether or not they are required:
 -ff (optional) : don't delete the estimated-frequencies files
 
 -suf (optional) : use a random suffix for output files, allowing running multiple instances at once
+
+-sort (optional) : reorder the sequence file sites using entropy before processing it for more consistent results
+
+-e (optional) : add an epsilon value (1e-10) onto zeroes in the H-Clust centres and normalize
 
 
 * "C" if both -ch and -cl are a multiple of 10 (including 0)

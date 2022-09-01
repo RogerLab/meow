@@ -1,4 +1,4 @@
-# PM: Version 0.5
+# PM: Version 0.5.1
 
 ### Introduction
 
@@ -54,7 +54,9 @@ Accepted values: “H” → Hierarchical clustering (H-clust); “C” → C-se
 **-log log_type** : Method to use for program output logs. **DEFAULT:** Both (file and nexus)
 Accepted values: “N” → No logs; “F” → Text file, “X” → Nexus file, “B” → Both file and nexus
 
-**-I** : Drop invariant sites from the sequence data beforeprocessing. **DEFAULT:** Don’t drop invariant sites.
+**-ri** : Drop invariant sites from the sequence data beforeprocessing. **DEFAULT:** Don’t drop invariant sites.
+
+**-I** : Add a frequency class for invariant sites in the output file. **DEFAULT:** Don’t add the invariant class.
 
 Additional flags can be found in the `pm_flags.txt` file.
 
@@ -113,7 +115,7 @@ greatly differ due to ties in the calculations. To mitigate this, PM attempts to
 by a consistent metric, which should remove the effects of permutations. The metric is a combination of site
 entropy and amino acid frequency, which produces a number that is relatively unique. From (limited) testing, it has
 been observed that this causes very few ties which results in a sequence file sorted in almost the same way every
-time.
+time. (As of ver0.5.1, this must be enabled via the -sort flag.)
 
 **Cluster algorithm**
 
@@ -161,10 +163,14 @@ lengths on the tree will be zeroed. If such a tree is detected, a warning messag
 
 The program generates a matrix of H-clust centres (frs) in much the same way as MAMMaL. However, in order to
 obtain more accurate cluster centres, PM will take any zeroes of the frs matrix and add a small value (1e-10) to
-them, and then normalize the data again. This generally results in smaller error values
+them, and then normalize the data again. This generally results in smaller error values. (As of ver0.5.1, this must be
+enabled via the -e flag.)
 
 
 ## Installation
+
+PM is not currently supported on Windows machines due to incompatibility. It was developed and tested on a
+remote Linux shell, so that is the recommended run environment. It would likely also work on MacOS.
 
 It is recommended to first install MAMMaL following the instructions in Susko (2022). PM comes with three files:
 pm, pm_functions, and mammal_functions. These must all be placed in the same directory, and should also be in

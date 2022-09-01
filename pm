@@ -145,7 +145,7 @@ if(is.null(nclass[1]) | is.null(nclass[2])) stop("must specify number of classes
 T1 <- Sys.time()
 
 # determine if we should use c-series or not
-if(!cluster.set & val == "R" & nclass[1] %in% seq(0,60,10) & nclass[2] %in% seq(0,60,10)) start.frs.type <- "c-series"
+if(!cluster.set & partition.mode == "R" & nclass[1] %in% seq(0,60,10) & nclass[2] %in% seq(0,60,10)) start.frs.type <- "c-series"
 
 # Keep track of events to log at the end
 file.log <- c(as.character(Sys.time()))
