@@ -13,7 +13,7 @@ source(paste0(functions.dir,"mammal_functions"))
 source(paste0(functions.dir,"pm_functions"))
 
 ##------------------------------------------------------------------------------
-## PM (MAMMaL Extension) - adds Entropy, Upper/Lower partitions, Invariable flag, and includes low rates
+## PM (MAMMaL Extension for Entropy and Rates) - adds Entropy, Upper/Lower partitions, Invariable flag, and includes low rates
 
 ## External programs
 dgpe <- paste(bindir,"dgpe",sep="")
@@ -35,9 +35,9 @@ q <- 0.75 # quantile for rate estimation
 lwt.needed <- output <- TRUE
 start.frs.type <- "hclust"
 log.method <- "both"
-invar <- plusF <- saveFrequencyFiles <- useSuffix <- cluster.set <- FALSE
+invar <- add.invar.class <- plusF <- cluster.set <- sort <- epsilon <- FALSE
+saveFrequencyFiles <- savePartitionFiles <- useSuffix <- FALSE
 partition.mode <- "E" # partition by entropy by default
-savePartitionFiles <- FALSE # whether or not to delete the partition files at the end
 C <- 1.0e-10 # penalty parameter
 min.lwt <- 1.0e-10 # minimum likelihood weight
 
@@ -123,6 +123,9 @@ while(iarg>=6){
     not.an.option <- FALSE
   }
   if(opt=="-I"){
+    add.invar.class <- TRUE; not.an.option <- FALSE
+  }
+  if(opt=="-ri"){
     invar <- TRUE; not.an.option <- FALSE
   }
   if(opt=="-pf"){
@@ -133,6 +136,12 @@ while(iarg>=6){
   }
   if(opt=="-suf"){
     useSuffix <- TRUE; not.an.option <- FALSE
+  }
+  if(opt=="-sort"){
+    sort <- TRUE; not.an.option <- FALSE
+  }
+  if(opt=="-e"){
+    epsilon <- TRUE; not.an.option <- FALSE
   }
   if(not.an.option) stop(paste(opt,"is not an option"))
   iarg <- iarg - 1 
@@ -187,13 +196,17 @@ if(partition.mode == "R") {
   }
 }
 
+total.classes <- (nclass[1]+ifelse(nclass[1]>0,ifelse(plusF,1,0),0))+(nclass[2]+ifelse(nclass[2]>0,ifelse(plusF,1,0),0))+ifelse(add.invar.class,1,0)
 Log(paste("Running PM with the following parameters:\n",
             "Sequence file: ",seqfile,"\t",ifelse(is.null(treefile),"",paste("Tree file: ",treefile)),"\n",
-            "Output file: ",paste0(outfile,".nex"),"\n",
+            "Output file: ",paste0(outfile,".nex (Total number of classes: ",total.classes,")"),"\n",
             "Partition mode: ",ifelse(partition.mode=="R","Rates",""),ifelse(partition.mode=="E","Entropy",""),ifelse(partition.mode=="K","K_eff",""),"\n",
             "High partition classes: ",nclass[1],"\tLow partition classes: ",nclass[2],"\n",
             "Quantile: ",q,"\tCluster type: ",start.frs.type,"\n",
-            ifelse(invar,"Remove invariant: TRUE","")
+            ifelse(invar,"Remove invariant: TRUE\n",""),
+            ifelse(add.invar.class,"Add invariant class: TRUE\n",""),
+            ifelse(sort,"Sort by Entropy: TRUE\n",""),
+            ifelse(epsilon,"Add Epsilon to H-Clust: TRUE","")
             )
       )
 
@@ -211,18 +224,23 @@ if(num_e[1] > 0) {
 }
 
 # Detect invariant sites and use new file with them removed if the flag is set
-num_i <- detectInvariant(seqfile,invar,suffix=file.suffix)
+invar.results <- detectInvariant(seqfile,invar,suffix=file.suffix)
+num_i <- c(invar.results[[1]],invar.results[[2]])
+invar.class <- invar.results[[3]]
 if(invar) {
   Log(paste("Removed",num_i[1],"invariant sites (new count:",num_i[2],")"))
-  if(num_e[1]) did.remove <- file.remove(seqfile) # remove temp sequence file if one was generated
+  if(num_e[1] > 0) did.remove <- file.remove(seqfile) # remove temp sequence file if one was generated
   seqfile <- file.format(seqfile,".i")
 } else Log(paste("Detected",num_i[1],"invariant sites"))
 
 # Try to sort the sequence file so we get more consistent output from different permutations
-sortSequenceFile(seqfile,suffix=file.suffix)
-sorted.seq <- file.format(seqfile,".s")
-if(num_e[1] > 0 | invar) did.remove <- file.remove(seqfile) # remove temp sequence file if one was generated
-seqfile <- sorted.seq
+if(sort) {
+  sortSequenceFile(seqfile,suffix=file.suffix)
+  sorted.seq <- file.format(seqfile,".s")
+  if(num_e[1] > 0 | invar) did.remove <- file.remove(seqfile) # remove temp sequence file if one was generated
+  seqfile <- sorted.seq
+  Log(paste("Sorted sequence file by Site Entropy"))
+}
 
 # We should get two files, one for high partition and one for low
 expectedFiles <- vector(length=2) 
@@ -293,7 +311,7 @@ for(i in 1:2) {
                                          clean=TRUE,bindir=bindir,suffix=file.suffix),
                          hclust.type="hclust",
                          nclass=nclass[i],dmethod="manhattan")
-    frs[[i]] <- addEpsilonToHclust(frs[[i]])
+    if(epsilon){ frs[[i]] <- addEpsilonToHclust(frs[[i]]) }
   }
   if(start.frs.type =="c-series"){
     frs[[i]] <- scan(paste(cseries.dir,"C",nclass[i],".aafreq.dat",sep=""),quiet=TRUE)
@@ -340,18 +358,25 @@ if(output){
   if(highExists) {
     fr1 <- matrix(scan(file.format("estimated-frequencies1"),quiet=TRUE),ncol=20,byrow=TRUE)
     CreateIQFreqfile(fr1,file.format(outfile,".high.nex"))
-    if(log.method == "nexus" & !lowExists) nexusHeader(file.format(outfile,".high.nex"), file.log)
+    if(!lowExists){
+      if(add.invar.class) addInvariantClassToNexus(paste0(outfile,".high.nex"), invar.class)
+      if(log.method == "nexus" | log.method == "both") nexusHeader(file.format(outfile,".high.nex"), file.log)
+    }
   }
   if(lowExists) {
     fr2 <- matrix(scan(file.format("estimated-frequencies2"),quiet=TRUE),ncol=20,byrow=TRUE)
     CreateIQFreqfile(fr2,file.format(outfile,".low.nex"))
-    if(log.method == "nexus" & !highExists) nexusHeader(file.format(outfile,".low.nex"), file.log)
+    if(!highExists){
+      if(add.invar.class) addInvariantClassToNexus(paste0(outfile,".low.nex"), invar.class)
+      if(log.method == "nexus" | log.method == "both") nexusHeader(file.format(outfile,".low.nex"), file.log)
+    }
   }
   
   # merge nexus files and delete them if they exist
   if(highExists & lowExists) {
     mergeNexFiles(file.format(outfile,".high.nex"),file.format(outfile,".low.nex"),outfile)
     did.remove <- file.remove(c(file.format(outfile,".high.nex"),file.format(outfile,".low.nex")))
+    if(add.invar.class) addInvariantClassToNexus(paste0(outfile,".nex"), invar.class)
     if(log.method == "nexus" | log.method == "both") nexusHeader(paste0(outfile,".nex"), file.log)
   }
 }
@@ -372,7 +397,7 @@ if(log.method == "file" | log.method == "both") {
 
 ## Remove all temporary files
 tmp.files <- c("tmp.out", "tmp.Sigma",
-               "tmp.frs1","tmp.frs2","tmp.err",
+               "tmp.frs1","tmp.frs2","_tmp.err",
                "tmp.lwt1","tmp.lwt2")
 tmp.files <- unlist(lapply(tmp.files,file.format))
 tmp.files <- append(tmp.files, c("rate_est.dat","estimated-weights"))

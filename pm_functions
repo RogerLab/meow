@@ -20,38 +20,13 @@ getEffectiveK <- function(v)
   return(1/sum(v^2))
 }
 
-# seqCount(seqfile) : counts the number of sequences and sites and outputs the result. stops the program if conflicting site counts are detected
+# seqCount(seqfile) : gets the number of taxa and site length from the header of the sequence file
 seqCount <- function(seqfile)
 {
-  f <- file(seqfile,open="r")
-  i <- 0
-  siteLength <- 0
-  while(TRUE) {
-    line <- readLines(f, n=1)
-    i <- i+1
-    
-    # Leave loop if EOF is reached
-    if(length(line) == 0) {
-      break
-    # Skip header line
-    } else if(i==1) {
-      next
-      
-    } else {
-      line <- unlist(strsplit(line," "))[2] # strip taxa names from the lines
-      if(siteLength==0) {
-        siteLength <- nchar(line)
-      } else {
-        # Stop program if we detect conflicting site counts
-        if(nchar(line) != siteLength) {
-          stop(paste("Detected conflicting site count at line",i,"of file. Stopping program."))
-        }
-      }
-    }
-  }
-  close(f)
-  
-  return(c(i-2,siteLength))
+  f <- scan(seqfile,what=character())
+  ntaxa <- as.numeric(f[1])
+  nsite <- as.numeric(f[2])
+  return(c(ntaxa,nsite))
 }
 
 # siteProportions(site) : returns a vector containing the proportionality of each amino acid type in the provided site vector
@@ -100,6 +75,10 @@ partition <- function(seqfile,q=0.75,makefile=T,func=getEntropy,suffix="")
   
   proportions <- apply(data,2,siteProportions) # get site proportions from the data
   sorted <- apply(proportions,2,func) # feed proportion data into "sorting" algorithm (def. getEntropy)
+    #test.out <- file(paste0("siteEntropy_",seqfile))
+    #lines <- as.character(sorted)
+    #writeLines(sorted,test.out)
+    #close(test.out)
   ptile <- quantile(sorted,q) # get the q-th percentile of the modified data (def. 75th)
   
   lowerPartition <- which(sorted<ptile)
@@ -133,6 +112,14 @@ partition <- function(seqfile,q=0.75,makefile=T,func=getEntropy,suffix="")
 sortSequenceFile <- function(seqfile,suffix="")
 {
   data <- read.aa(seqfile) # read in amino acid data from input file
+  
+  # DEBUG : Do not sort sequence file
+  #filename <- paste0(removeSuffix(seqfile,suffix),".s",suffix)
+  #seq <- phyDat(data, type = "AA")
+  #write.phyDat(seq,file = filename,format = "interleaved", nbcol = 6, colsep = " ")
+  #return()
+  # END DEBUG
+  
   n <- nrow(data) # number of sequences
   
   proportions <- apply(data,2,siteProportions) # get site proportions from the data
@@ -205,6 +192,7 @@ removeEmptySites <- function(seqfile,suffix="")
     seq <- phyDat(data, type = "AA")
     write.phyDat(seq,file = filename,format = "interleaved", nbcol = 6, colsep = " ")
   }
+  
   return(c(nempty,n-nempty))
 }
 
@@ -219,6 +207,9 @@ detectInvariant <- function(seqfile,output=TRUE,suffix="")
   
   invariant <- which(entropy<7e-10) 
   ninvariant <- length(invariant)
+  if(ninvariant > 0)
+    invar.class <- invariantProportions(data,invariant) # generate invariant class for use if the -I flag is set
+  else invar.class <- rep(0,20)
   
   if(ninvariant > 0 & output) data <- data[,-invariant]
   
@@ -228,7 +219,26 @@ detectInvariant <- function(seqfile,output=TRUE,suffix="")
     write.phyDat(seq, filename, format = "phylip")
   }
   
-  return(c(ninvariant,n-ninvariant))
+  return(list(ninvariant,n-ninvariant,invar.class))
+}
+
+# invariantProportions(data,invariant) : returns a frequency class for invariant sites given a phydat matrix and a set of which columns contain the invariant sites.
+invariantProportions <- function(data,invariant)
+{
+  ninvariant <- length(invariant)
+  invar.sites <- data[,invariant]
+  
+  if(ninvariant > 1)
+    invar.sites <- apply(invar.sites,2,function(x){return(paste0(x,collapse=""))})
+  
+  class <- unlist(lapply(AminoAcids, function(aa) {
+    sites <- unlist(lapply(invar.sites,tolower))
+    n <- unlist(lapply(sites, function(x){ return(grepl(aa,x)) }))
+    n <- which(n)
+    return(length(n) / length(sites))
+  }))
+  
+  return(class)
 }
 
 # generateTree(seqfile) : creates a neighbour joining tree from a sequence file using the LG algorithm
@@ -281,20 +291,35 @@ mergeNexFiles <- function(file1,file2,outfile)
   end1 <- which(l1=="")-1
   end2 <- which(l2=="")-1
   
-  for(i in 3:end1)
-  {
-    l1[i] <- gsub("ES", "EShigh", l1[i])
-  }
-  for(i in 3:end2)
-  {
-    l2[i] <- gsub("ES", "ESlow", l2[i])
-  }
+  for(i in 3:end1) { l1[i] <- gsub("ES", "EShigh", l1[i]) }
+  
+  for(i in 3:end2) { l2[i] <- gsub("ES", "ESlow", l2[i]) }
   
   txt <- c("#nexus","begin models;",l1[3:end1],l2[3:end2],"")
   
   model <- paste0("frequency ESmodel = FMIX{", paste0("EShighclass",1:length(3:end1),collapse = ","),",", paste0("ESlowclass",1:length(3:end2),collapse = ",")   ,"};")
   txt <- c(txt,model,"end;")
   write.table(txt,paste0(outfile,".nex"),quote=F, append = FALSE, sep = " ", dec = ".", row.names = F, col.names = F)
+}
+
+# addInvariantClassToNexus(nexfile,class) : opens a nexus file and inserts an invariant class based on the given class vector
+addInvariantClassToNexus <- function(nexfile,class){
+  f <- file(nexfile)
+  l <- readLines(f)
+  insert.pos <- 1
+  while(!grepl("frequency ESmodel",l[insert.pos])){
+    insert.pos <- insert.pos + 1
+  }
+  insert.class <- paste0("frequency ESinvariant = ",paste(class,collapse=" ")," ;")
+  model <- unlist(strsplit(l[insert.pos],","))
+  model[1:(length(model)-1)] <- lapply(model[1:(length(model)-1)],function(x){ return(paste0(x,":1")) })
+  model[length(model)] <- paste0(substr(model[length(model)],1,nchar(model[length(model)])-2) , ":1};")
+  model <- paste(model,collapse=",")
+  write.position <- unlist(gregexpr(pattern ="};",model))[1]
+  new.model <- paste0(substr(model,1,write.position-1),",ESinvariant:0};")
+  new_l <- c(l[1:(insert.pos-2)], insert.class,"",new.model,"end;")
+  writeLines(new_l,f)
+  close(f)
 }
 
 # nexusHeader(file,lines) : adds a header comment at the start of a nexus file

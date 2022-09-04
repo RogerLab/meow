@@ -46,15 +46,17 @@ test_that("SeqCount",{
   # function should have the same answer as the file header
   expect_identical(h,paste(count[1],count[2])) 
   
-  # construct valid & invalid file to test that they are accepted or rejected properly
-  f <- file("bad-seqfile")
-  g <- file("good-seqfile")
-  writeLines(c("2 3","Test ABC","Test2 ABCD"), f); close(f)
-  writeLines(c("2 4", "Test ABCD", "Test2 EFGH"), g); close(g)
-  expect_error(seqCount("bad-seqfile"), "*[conflicting site count]*")
-  expect_identical(seqCount("good-seqfile"), c(2,4))
+  # seqCount now only takes the header values ; below tests are useless
   
-  did.remove <- file.remove(c("good-seqfile","bad-seqfile"))
+  # construct valid & invalid file to test that they are accepted or rejected properly
+  #f <- file("bad-seqfile")
+  #g <- file("good-seqfile")
+  #writeLines(c("2 3","Test ABC","Test2 ABCD"), f); close(f)
+  #writeLines(c("2 4", "Test ABCD", "Test2 EFGH"), g); close(g)
+  #expect_error(seqCount("bad-seqfile"), "*[conflicting site count]*")
+  #expect_identical(seqCount("good-seqfile"), c(2,4))
+  
+  #did.remove <- file.remove(c("good-seqfile","bad-seqfile"))
 })
 
 test_that("SiteProportions",{
@@ -278,7 +280,8 @@ test_that("DetectInvariant",{
   tmp.seq <- file("tmp.seq")
   writeLines(c("5 10","Test1 AEAEAEAEAE","Test2 KK-KKKK-KK","Test3 FFFF---FFF","Test4 AE---EMTAE","Test5 HQQQQQ-QQH"), tmp.seq)
   close(tmp.seq)
-  n <- detectInvariant("tmp.seq")
+  res <- detectInvariant("tmp.seq")
+  n <- c(res[[1]],res[[2]])
   expect_equal(n, c(0,10))
   expect_true(file.exists("tmp.seq.i"))
   expect_identical(read.aa("tmp.seq"),read.aa("tmp.seq.i"))
@@ -288,7 +291,8 @@ test_that("DetectInvariant",{
   tmp.seq <- file("tmp.seq")
   writeLines(c("5 10","Test1 AEAEAEAEAV","Test2 KK-KKKK-KV","Test3 FFFF---FFV","Test4 AE---EMTAV","Test5 HQQQQQ-QQV"), tmp.seq)
   close(tmp.seq)
-  n <- detectInvariant("tmp.seq")
+  res <- detectInvariant("tmp.seq")
+  n <- c(res[[1]],res[[2]])
   expect_equal(n, c(1,9))
   expect_true(file.exists("tmp.seq.i"))
   f <- file("tmp.seq.i","r")
@@ -305,7 +309,8 @@ test_that("DetectInvariant",{
   tmp.seq <- file("tmp.seq")
   writeLines(c("5 10","Test1 AEVEWEYEAE","Test2 KKVKWKY-KK","Test3 FFVFW-YFFF","Test4 AEV-WEYTAE","Test5 HQVQWQYQQH"), tmp.seq)
   close(tmp.seq)
-  n <- detectInvariant("tmp.seq",suffix="678")
+  res <- detectInvariant("tmp.seq",suffix="678")
+  n <- c(res[[1]],res[[2]])
   expect_equal(n, c(3,7))
   expect_true(file.exists("tmp.seq.i678"))
   f <- file("tmp.seq.i678","r")
@@ -318,6 +323,25 @@ test_that("DetectInvariant",{
   }
   expect_true(valid)
   did.remove <- file.remove(c("tmp.seq","tmp.seq.i678"))
+})
+
+test_that("InvariantProportions",{
+  tmp.seq <- file("tmp.seq")
+               #invariants : --x-x-x---x-x--
+  writeLines(c("5 15","Test1 AEVEWEYEAEKAWGH",
+                      "Test2 KKVKWKY-KKKY-IK",
+                      "Test3 FFVFW-YFFFKAWIH",
+                      "Test4 AEV-WEYTAEKEW-K",
+                      "Test5 HQVQWQYQQHKEWIH"), tmp.seq)
+  close(tmp.seq)
+  res <- detectInvariant("tmp.seq")
+  invar.class <- res[[3]]
+  expect_equal(length(invar.class), 20)
+  expect_equal(length(which(invar.class > 0)), 4)
+  expect_equal(invar.class[which(AA == "v")],0.2) 
+  expect_equal(invar.class[which(AA == "w")],0.4) 
+  expect_equal(invar.class[which(AA == "k")],0.2) 
+  expect_equal(invar.class[which(AA == "y")],0.2) 
 })
 
 test_that("GenerateTree",{
