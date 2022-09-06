@@ -397,7 +397,7 @@ if(log.method == "file" | log.method == "both") {
 
 ## Remove all temporary files
 tmp.files <- c("tmp.out", "tmp.Sigma",
-               "tmp.frs1","tmp.frs2","_tmp.err",
+               "tmp.frs1","tmp.frs2","tmp.err",
                "tmp.lwt1","tmp.lwt2")
 tmp.files <- unlist(lapply(tmp.files,file.format))
 tmp.files <- append(tmp.files, c("rate_est.dat","estimated-weights"))
