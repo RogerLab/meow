@@ -170,7 +170,7 @@ enabled via the -e flag.)
 ## Installation
 
 PM is not currently supported on Windows machines due to incompatibility. It was developed and tested on a
-remote Linux shell, so that is the recommended run environment. It would likely also work on MacOS.
+remote Linux shell, so that is the recommended run environment. It has also been tested to work on MacOS.
 
 It is recommended to first install MAMMaL following the instructions in Susko (2022). PM comes with three files:
 pm, pm_functions, and mammal_functions. These must all be placed in the same directory, and should also be in
