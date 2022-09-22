@@ -52,6 +52,8 @@ Here is a list of all flags accepted by PM and whether or not they are required:
 
 -ff (optional) : don't delete the estimated-frequencies files
 
+-tmp (optional) : don't delete any of the temporary files (files that start with '.tmp')
+
 -suf (optional) : use a random suffix for output files, allowing running multiple instances at once
 
 -sort (optional) : reorder the sequence file sites using entropy before processing it for more consistent results

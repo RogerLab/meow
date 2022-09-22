@@ -36,7 +36,7 @@ lwt.needed <- output <- TRUE
 start.frs.type <- "hclust"
 log.method <- "both"
 invar <- add.invar.class <- plusF <- cluster.set <- sort <- epsilon <- FALSE
-saveFrequencyFiles <- savePartitionFiles <- useSuffix <- FALSE
+saveFrequencyFiles <- savePartitionFiles <- saveTempFiles <- useSuffix <- FALSE
 partition.mode <- "E" # partition by entropy by default
 C <- 1.0e-10 # penalty parameter
 min.lwt <- 1.0e-10 # minimum likelihood weight
@@ -133,6 +133,9 @@ while(iarg>=6){
   }
   if(opt=="-ff"){
     saveFrequencyFiles <- TRUE; not.an.option <- FALSE
+  }
+  if(opt=="-tmp"){
+    saveTempFiles <- TRUE; not.an.option <- FALSE
   }
   if(opt=="-suf"){
     useSuffix <- TRUE; not.an.option <- FALSE
@@ -407,6 +410,7 @@ tmp.files <- c("tmp.out", "tmp.Sigma",
 tmp.files <- unlist(lapply(tmp.files,file.format))
 tmp.files <- append(tmp.files, c("rate_est.dat","estimated-weights"))
 if(partition.mode == "R") { if(grepl(".tmp",treefile)) tmp.files <- append(tmp.files,treefile) }
+if(saveTempFiles) tmp.files <- vector() # keep the temp files by resetting tmp.files to empty vector
 if(seqfile != orig.seqfile) tmp.files <- append(tmp.files,seqfile)
 if(!saveFrequencyFiles) tmp.files <- append(tmp.files, 
              c(file.format("estimated-frequencies1"), file.format("estimated-frequencies2")) )
