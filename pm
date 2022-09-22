@@ -379,6 +379,11 @@ if(output){
     if(add.invar.class) addInvariantClassToNexus(paste0(outfile,".nex"), invar.class)
     if(log.method == "nexus" | log.method == "both") nexusHeader(paste0(outfile,".nex"), file.log)
   }
+  # if they don't both exist, rename the .high or .low file to the appropriate output
+  else {
+    if(highExists) rn <- file.rename(file.format(outfile,".high.nex"), file.format(outfile,".nex"))
+    if(lowExists)  rn <- file.rename(file.format(outfile,".low.nex"), file.format(outfile,".nex"))
+  }
 }
 
 # Write log file

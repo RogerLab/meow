@@ -1,3 +1,7 @@
+#### v0.5.2 2022-09-22
+- Changed output file name to match desired ouput when given zero high partition classes or zero low partition classes
+  (formerly would add ".high.nex" or ".low.nex" to the end of the files)
+
 #### v0.5.1 2022-09-04
 - Added option to include invariant class in output nexus file
 - Changed remove invariant flag from -I to -ri
