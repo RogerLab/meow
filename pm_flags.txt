@@ -38,6 +38,9 @@ Here is a list of all flags accepted by PM and whether or not they are required:
 
 -lm min_weight (optional) : sets the minimum likelihood weight (Default: 1.0e-10)
 
+-cf classfile (optional) : name of file containing the frs matrix for the high and low classes
+	if set, this will be used instead of clustering or c-series data
+
 -ri (optional) : remove invariant sites from sequence data before processing it
 
 -I (optional) : add an extra frequency class for invariant sites in the generated .nex file

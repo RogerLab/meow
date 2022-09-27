@@ -29,7 +29,7 @@ args <- commandArgs()
 iarg <- length(args)
 
 nclass <- c(NULL,NULL) # number of classes ([1] = high partition, [2] = low partition)
-iqtreefile <- seqfile <- treefile <- NULL
+iqtreefile <- seqfile <- treefile <- classfile <- NULL
 outfile <- "esmodel" # name of output .nex file
 q <- 0.75 # quantile for rate estimation
 lwt.needed <- output <- TRUE
@@ -62,6 +62,10 @@ while(iarg>=6){
   if(opt=="-o"){
     if(is.null(val)) stop("output file name not specified in -o outfile")
     outfile <- val; not.an.option <- FALSE
+  }
+  if(opt=="-cf"){
+    if(is.null(val)) stop("classfile not specified in -cf classfile")
+    classfile <- FnameE(val); not.an.option <- FALSE
   }
   if(opt=="-c"){
     if(is.null(val)) stop("number of classes not specified in -c nclasses")
@@ -152,6 +156,12 @@ while(iarg>=6){
 
 if(is.null(seqfile)) stop("sequence file needed: -s seqfile")
 if(is.null(nclass[1]) | is.null(nclass[2])) stop("must specify number of classes in upper and lower partitions: -cl nlow; -ch nhigh (alternatively: -c nclasses [for both])")
+if(!is.null(classfile)) {
+  classes <- scan(file=classfile,what=double(),quiet=TRUE)
+  expected <- 20*(nclass[1]+nclass[2])
+  if(length(classes) != expected) stop(paste("class file contains",length(classes),"data points, but was expected to have",expected))
+  classes <- matrix(classes,nrow=(nclass[1]+nclass[2]),ncol=20)
+}
 
 # start timer
 T1 <- Sys.time()
@@ -206,6 +216,7 @@ Log(paste("Running PM with the following parameters:\n",
             "Partition mode: ",ifelse(partition.mode=="R","Rates",""),ifelse(partition.mode=="E","Entropy",""),ifelse(partition.mode=="K","K_eff",""),"\n",
             "High partition classes: ",nclass[1],"\tLow partition classes: ",nclass[2],"\n",
             "Quantile: ",q,"\tCluster type: ",start.frs.type,"\n",
+            ifelse(!is.null(classfile),paste0("Provided class file: ",classfile," (Will be used instead of clustering)\n"),""),
             ifelse(invar,"Remove invariant: TRUE\n",""),
             ifelse(add.invar.class,"Add invariant class: TRUE\n",""),
             ifelse(sort,"Sort by Entropy: TRUE\n",""),
@@ -309,14 +320,18 @@ for(i in 1:2) {
   if(nclass[i] == 0) {next} # skip if there are no classes for this partition
   
   ## Starting frequencies
-  if(start.frs.type =="hclust"){
+  if(!is.null(classfile)){
+    start <- ifelse(i==1,1,nclass[1]+1); end <- ifelse(i==1,nclass[1],nclass[1]+nclass[2])
+    frs[[i]] <- classes[start:end,]
+  }
+  else if(start.frs.type =="hclust"){
     frs[[i]] <- HclustCenters(DataFrequencies(expectedFiles[i],
                                          clean=TRUE,bindir=bindir,suffix=file.suffix),
                          hclust.type="hclust",
                          nclass=nclass[i],dmethod="manhattan")
     if(epsilon){ frs[[i]] <- addEpsilonToHclust(frs[[i]]) }
   }
-  if(start.frs.type =="c-series"){
+  else if(start.frs.type =="c-series"){
     frs[[i]] <- scan(paste(cseries.dir,"C",nclass[i],".aafreq.dat",sep=""),quiet=TRUE)
     frs[[i]] <- matrix(frs[[i]],ncol=20,byrow=TRUE)
   }
