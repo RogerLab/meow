@@ -31,6 +31,7 @@ iarg <- length(args)
 nclass <- c(NULL,NULL) # number of classes ([1] = high partition, [2] = low partition)
 iqtreefile <- seqfile <- treefile <- classfile <- NULL
 outfile <- "esmodel" # name of output .nex file
+file.suffix <- ""
 q <- 0.75 # quantile for rate estimation
 lwt.needed <- output <- TRUE
 start.frs.type <- "hclust"
@@ -142,6 +143,7 @@ while(iarg>=6){
     saveTempFiles <- TRUE; not.an.option <- FALSE
   }
   if(opt=="-suf"){
+    if(!is.null(val)) file.suffix <- val
     useSuffix <- TRUE; not.an.option <- FALSE
   }
   if(opt=="-sort"){
@@ -179,11 +181,13 @@ Log <- function(line) {
 
 # Generate a random file suffix to support multiple threads at once
 if(useSuffix) {
-  file.suffix <- as.character(round(runif(1) * 100000)) 
-  while(nchar(file.suffix) < 4) file.suffix <- as.character(round(runif(1) * 100000)) # use at least a 4-digit number
-  Log(paste("Generated file suffix:",file.suffix))
+  if(file.suffix == ""){
+    file.suffix <- as.character(round(runif(1) * 100000)) 
+    while(nchar(file.suffix) < 4) file.suffix <- as.character(round(runif(1) * 100000)) # use at least a 4-digit number
+    Log(paste("Generated file suffix:",file.suffix))
+  } else Log(paste("Using file suffix:",file.suffix))
   file.suffix <- paste0("_",file.suffix) #use underscore in front for more readable file names
-} else file.suffix <- ""
+} 
 # Utility function to imitate paste0 and add the file suffix to the end
 file.format <- function(...) { 
   fname <- paste0(...,collapse="")
@@ -211,18 +215,18 @@ if(partition.mode == "R") {
 
 total.classes <- (nclass[1]+ifelse(nclass[1]>0,ifelse(plusF,1,0),0))+(nclass[2]+ifelse(nclass[2]>0,ifelse(plusF,1,0),0))+ifelse(add.invar.class,1,0)
 Log(paste("Running PM with the following parameters:\n",
-            "Sequence file: ",seqfile,"\t",ifelse(is.null(treefile),"",paste("Tree file: ",treefile)),"\n",
-            "Output file: ",paste0(outfile,".nex (Total number of classes: ",total.classes,")"),"\n",
-            "Partition mode: ",ifelse(partition.mode=="R","Rates",""),ifelse(partition.mode=="E","Entropy",""),ifelse(partition.mode=="K","K_eff",""),"\n",
-            "High partition classes: ",nclass[1],"\tLow partition classes: ",nclass[2],"\n",
-            "Quantile: ",q,"\tCluster type: ",start.frs.type,"\n",
-            ifelse(!is.null(classfile),paste0("Provided class file: ",classfile," (Will be used instead of clustering)\n"),""),
-            ifelse(invar,"Remove invariant: TRUE\n",""),
-            ifelse(add.invar.class,"Add invariant class: TRUE\n",""),
-            ifelse(sort,"Sort by Entropy: TRUE\n",""),
-            ifelse(epsilon,"Add Epsilon to H-Clust: TRUE","")
-            )
-      )
+          "Sequence file: ",seqfile,"\t",ifelse(is.null(treefile),"",paste("Tree file: ",treefile)),"\n",
+          "Output file: ",paste0(outfile,".nex (Total number of classes: ",total.classes,")"),"\n",
+          "Partition mode: ",ifelse(partition.mode=="R","Rates",""),ifelse(partition.mode=="E","Entropy",""),ifelse(partition.mode=="K","K_eff",""),"\n",
+          "High partition classes: ",nclass[1],"\tLow partition classes: ",nclass[2],"\n",
+          "Quantile: ",q,"\tCluster type: ",start.frs.type,"\n",
+          ifelse(!is.null(classfile),paste0("Provided class file: ",classfile," (Will be used instead of clustering)\n"),""),
+          ifelse(invar,"Remove invariant: TRUE\n",""),
+          ifelse(add.invar.class,"Add invariant class: TRUE\n",""),
+          ifelse(sort,"Sort by Entropy: TRUE\n",""),
+          ifelse(epsilon,"Add Epsilon to H-Clust: TRUE","")
+          )
+    )
 
 # Count and output number of sequences and sites in the sequence file
 count <- seqCount(seqfile) 
@@ -326,9 +330,9 @@ for(i in 1:2) {
   }
   else if(start.frs.type =="hclust"){
     frs[[i]] <- HclustCenters(DataFrequencies(expectedFiles[i],
-                                         clean=TRUE,bindir=bindir,suffix=file.suffix),
-                         hclust.type="hclust",
-                         nclass=nclass[i],dmethod="manhattan")
+                                    clean=TRUE,bindir=bindir,suffix=file.suffix),
+                          hclust.type="hclust",
+                          nclass=nclass[i],dmethod="manhattan")
     if(epsilon){ frs[[i]] <- addEpsilonToHclust(frs[[i]]) }
   }
   else if(start.frs.type =="c-series"){
@@ -340,7 +344,7 @@ for(i in 1:2) {
     system(paste0(bindir,"charfreq 20 < ",seqfile," >> tmp.frs",i,file.suffix))
     nclass[i] <- nclass[i]+1
   }
-
+  
   ## mult-mix-lwt
   cmdline <- paste(bindir,"mult-mix-lwt -i ",expectedFiles[i],
                    paste0(" -l tmp.lwt",i,file.suffix),
@@ -429,7 +433,7 @@ if(partition.mode == "R") { if(grepl(".tmp",treefile)) tmp.files <- append(tmp.f
 if(saveTempFiles) tmp.files <- vector() # keep the temp files by resetting tmp.files to empty vector
 if(seqfile != orig.seqfile) tmp.files <- append(tmp.files,seqfile)
 if(!saveFrequencyFiles) tmp.files <- append(tmp.files, 
-             c(file.format("estimated-frequencies1"), file.format("estimated-frequencies2")) )
+          c(file.format("estimated-frequencies1"), file.format("estimated-frequencies2")) )
 if(!savePartitionFiles) tmp.files <- append(tmp.files,expectedFiles)
 
 to.remove <- vector()

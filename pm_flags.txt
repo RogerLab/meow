@@ -41,6 +41,9 @@ Here is a list of all flags accepted by PM and whether or not they are required:
 -cf classfile (optional) : name of file containing the frs matrix for the high and low classes
 	if set, this will be used instead of clustering or c-series data
 
+-suf suffix (optional) : append the provided suffix to the end of all temporary files
+	if -suf is used with no paramter value, generate a random suffix for output files
+
 -ri (optional) : remove invariant sites from sequence data before processing it
 
 -I (optional) : add an extra frequency class for invariant sites in the generated .nex file
@@ -56,8 +59,6 @@ Here is a list of all flags accepted by PM and whether or not they are required:
 -ff (optional) : don't delete the estimated-frequencies files
 
 -tmp (optional) : don't delete any of the temporary files (files that start with '.tmp')
-
--suf (optional) : use a random suffix for output files, allowing running multiple instances at once
 
 -sort (optional) : reorder the sequence file sites using entropy before processing it for more consistent results
 
