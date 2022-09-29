@@ -353,11 +353,11 @@ for(i in 1:2) {
                    ifelse(plusF," -d ",""),
                    " -p ",
                    ifelse(C>0,paste(" -C",C),""),                 
-                   " > tmp.err",file.suffix,sep="")
+                   " > tmp.err",i,file.suffix,sep="")
   system(cmdline)
 }
 
-lnl <-  scan(file.format("tmp.err"),quiet=TRUE)
+# lnl <-  scan(file.format("tmp.err"),quiet=TRUE)
 
 # stop timer
 T2 <- Sys.time()
@@ -420,7 +420,8 @@ if(log.method == "file" | log.method == "both") {
 
 ## Remove all temporary files
 tmp.files <- c("tmp.out", "tmp.Sigma",
-               "tmp.frs1","tmp.frs2","tmp.err",
+               "tmp.frs1","tmp.frs2",
+               "tmp.err1","tmp.err2",
                "tmp.lwt1","tmp.lwt2")
 tmp.files <- unlist(lapply(tmp.files,file.format))
 tmp.files <- append(tmp.files, c("rate_est.dat","estimated-weights"))
