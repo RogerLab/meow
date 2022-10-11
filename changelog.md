@@ -1,3 +1,8 @@
+#### v0.5.3 2022-10-11
+- Made program check for incompatible sequence files (taxa names with less than or fewer than 10 characters)
+	- Will generate a new sequence file if the provided one is incompatible, instead of crashing
+	- If using rates, does the same with the treefile
+
 #### v0.5.2 2022-09-22
 - Changed output file name to match desired ouput when given zero high partition classes or zero low partition classes
   (formerly would add ".high.nex" or ".low.nex" to the end of the files)

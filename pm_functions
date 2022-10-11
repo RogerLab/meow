@@ -23,7 +23,7 @@ getEffectiveK <- function(v)
 # seqCount(seqfile) : gets the number of taxa and site length from the header of the sequence file
 seqCount <- function(seqfile)
 {
-  f <- scan(seqfile,what=character())
+  f <- scan(seqfile,what=character(),quiet=TRUE)
   ntaxa <- as.numeric(f[1])
   nsite <- as.numeric(f[2])
   return(c(ntaxa,nsite))
@@ -330,4 +330,35 @@ nexusHeader <- function(fname,lines) {
   lines <- append(lines,content)
   writeLines(lines,f)
   close(f)
+}
+
+# enforceSequenceSyntax(seqfile) : checks if a sequence file has the correct formatting (10 characters per taxon name) and outputs a fixed one if it doesn't
+enforceSequenceSyntax <- function(seqfile,treefile=NULL) {
+  output <- FALSE
+  data <- read.aa(seqfile)
+  names <- row.names(data)
+  row.names(data) <- unlist(lapply(names, function(name){ 
+    if(nchar(name) < 10) {
+      output <<- TRUE
+      return(paste0(name,rep("0",10-nchar(name))))
+    }  
+    else if(nchar(name) > 10) {
+      output <<- TRUE
+      return(substr(name,1,10))
+    }
+    else return(name)
+  }))
+  if(output) {
+    seq <- phyDat(data, type="AA")
+    filename=paste0("tmp.",seqfile)
+    write.phyDat(seq, filename, format = "phylip")
+    if(!is.null(treefile)){
+      t <- read.tree(treefile)
+      index.order <- match(names, t$tip.label)
+      t.names <- row.names(data)[order(index.order)]
+      t$tip.label <- t.names
+      write.tree(t,file=paste0("tmp.",treefile))
+    }
+  }
+  return(output)
 }
