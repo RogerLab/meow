@@ -340,7 +340,7 @@ enforceSequenceSyntax <- function(seqfile,treefile=NULL) {
   row.names(data) <- unlist(lapply(names, function(name){ 
     if(nchar(name) < 10) {
       output <<- TRUE
-      return(paste0(name,rep("0",10-nchar(name))))
+      return(paste0(name,paste(rep("0",10-nchar(name)),collapse="")))
     }  
     else if(nchar(name) > 10) {
       output <<- TRUE
@@ -350,15 +350,26 @@ enforceSequenceSyntax <- function(seqfile,treefile=NULL) {
   }))
   if(output) {
     seq <- phyDat(data, type="AA")
-    filename=paste0("tmp.",seqfile)
-    write.phyDat(seq, filename, format = "phylip")
+    write.phyDat(seq, addPrefixToFile(seqfile,"tmp."), format = "phylip")
     if(!is.null(treefile)){
       t <- read.tree(treefile)
       index.order <- match(names, t$tip.label)
       t.names <- row.names(data)[order(index.order)]
       t$tip.label <- t.names
-      write.tree(t,file=paste0("tmp.",treefile))
+      write.tree(t,file=addPrefixToFile(treefile,"tmp."))
     }
   }
   return(output)
+}
+
+# utility function for adding prefix to filenames and accounting for relative paths
+addPrefixToFile <- function(file,pref) {
+  if(grepl("/",file)){ # account for paths in filenames
+    loc <- nchar(file)
+    while(substr(file,loc,loc) != "/"){ # find last occurrence of slash character
+      loc <- loc-1
+    }
+    filename <- paste0(substr(file,1,loc),pref,substr(file,loc+1,nchar(file)))
+  } else filename<-paste0(pref,file)
+  return(filename)
 }

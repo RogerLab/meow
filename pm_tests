@@ -373,3 +373,40 @@ test_that("VerifyTree",{
   
   did.remove <- file.remove(c("tmp.tree","tmp.tree.tmp"))
 })
+
+test_that("EnforceSequenceSyntax",{
+  tmp.seq <- file("tmp.seq")
+  writeLines(c("5 10","Testtest01 AEVEWEYEAE","Testtest02 KKVKWKY-KK","Testtest03 FFVFW-YFFF","Testtest04 AEV-WEYTAE","Testtest05 HQVQWQYQQH"), tmp.seq)
+  close(tmp.seq)
+  expect_false(enforceSequenceSyntax("tmp.seq"))
+  expect_false(file.exists("tmp.tmp.seq"))
+  
+  tmp.seq <- file("tmp.seq")
+  writeLines(c("5 10","Test1 AEVEWEYEAE","Test2 KKVKWKY-KK","Test3 FFVFW-YFFF","Test4 AEV-WEYTAE","Test5 HQVQWQYQQH"), tmp.seq)
+  close(tmp.seq)
+  expect_true(enforceSequenceSyntax("tmp.seq"))
+  expect_true(file.exists("tmp.tmp.seq"))
+  expect_false(enforceSequenceSyntax("tmp.tmp.seq"))
+  
+  tmp.seq <- file("tmp.seq")
+  writeLines(c("5 10","FirstTaxon AEVEWEYEAE","SecondTaxon KKVKWKY-KK","ThirdTaxon FFVFW-YFFF","FourthTaxon AEV-WEYTAE","FifthTaxon HQVQWQYQQH"), tmp.seq)
+  close(tmp.seq)
+  tmp.tree <- file("tmp.tree")
+  writeLines(c("(FirstTaxon:0.3434,((SecondTaxon:0.0151,ThirdTaxon:0.345923):0.353785,(FourthTaxon:0.01124,FifthTaxon:0.33333):0.42758):0.4528);"), tmp.tree)
+  close(tmp.tree)
+  expect_true(enforceSequenceSyntax("tmp.seq","tmp.tree"))
+  expect_true(file.exists("tmp.tmp.seq")); expect_true(file.exists("tmp.tmp.tree"))
+  data <- read.aa("tmp.tmp.seq")
+  tree <- read.tree("tmp.tmp.tree")
+  expect_identical(row.names(data), c("FirstTaxon","SecondTaxo","ThirdTaxon","FourthTaxo","FifthTaxon"))
+  expect_identical(tree$tip.label, c("FirstTaxon","SecondTaxo","ThirdTaxon","FourthTaxo","FifthTaxon"))
+  
+  did.remove <- file.remove(c("tmp.seq","tmp.tree","tmp.tmp.seq","tmp.tmp.tree"))
+})
+
+test_that("addPrefixToFile",{
+  test1 <- "test.file"
+  test2 <- "workspace/bin/temp/test.file"
+  expect_equal(addPrefixToFile(test1,"tmp."),"tmp.test.file")
+  expect_equal(addPrefixToFile(test2,"tmp."),"workspace/bin/temp/tmp.test.file")
+})

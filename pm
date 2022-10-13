@@ -202,9 +202,9 @@ file.format <- function(...) {
 # Generate temporary sequence file fixing formatting if any taxa don't follow the 10-character name rule
 need.replace <- enforceSequenceSyntax(seqfile,treefile)
 if(need.replace) {
-  seqfile <- paste0("tmp.",seqfile)
+  seqfile <- addPrefixToFile(seqfile,"tmp.")
   if(partition.mode == "R" & !is.null(treefile))
-    treefile <- paste0("tmp.",treefile)
+    treefile <- addPrefixToFile(treefile,"tmp.")
 }
 
 # Check if the treefile has any negatives and zero them
