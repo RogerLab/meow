@@ -1,7 +1,7 @@
 PM is an extension of MAMMaL, and some input flags are different. 
 Here is a list of all flags accepted by PM and whether or not they are required:
 
--s seqfile (required) : name of input sequence file 
+-s seqfile (required*) : name of input sequence file 
 
 -p partition_type (optional) : method to use to partition the sequence data (Default: "E")
 	accepted values:
@@ -24,7 +24,13 @@ Here is a list of all flags accepted by PM and whether or not they are required:
 
 -C penalty (optional) : the penalty parameter to use (Default: 1.0e-10)
 
--f cluster_type (optional) : clustering algorithm to use (Default: "H"*)
+-sh high_seqfile (required if -s not set) : name of the input high-partition sequence file
+	must be paired with -sl ; will stand in for the partitioned files that are typically generated
+
+-sl low_seqfile (required if -s not set) : name of the input low-partition sequence file
+	must be paired with -sh ; will stand in for the partitioned files that are typically generated
+
+-f cluster_type (optional) : clustering algorithm to use (Default: "H"**)
 	accepted values:
 	"C" : c-series
 	"H" : hierarchical clustering 
@@ -64,5 +70,5 @@ Here is a list of all flags accepted by PM and whether or not they are required:
 
 -e (optional) : add an epsilon value (1e-10) onto zeroes in the H-Clust centres and normalize
 
-
-* "C" if both -ch and -cl are a multiple of 10 (including 0)
+*  Except when using -sl and -sh flags to specify manually partitioned sequence files
+** "C" if both -ch and -cl are a multiple of 10 (including 0)

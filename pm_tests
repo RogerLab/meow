@@ -401,6 +401,14 @@ test_that("EnforceSequenceSyntax",{
   expect_identical(row.names(data), c("FirstTaxon","SecondTaxo","ThirdTaxon","FourthTaxo","FifthTaxon"))
   expect_identical(tree$tip.label, c("FirstTaxon","SecondTaxo","ThirdTaxon","FourthTaxo","FifthTaxon"))
   
+  tmp.seq <- file("tmp.seq")
+  writeLines(c("5 10","TaxonNumber1 AEVEWEYEAE","TaxonNumber2 KKVKWKY-KK","TaxonNumber3 FFVFW-YFFF","TaxonNumber4 AEV-WEYTAE","TaxonNumber5 HQVQWQYQQH"),tmp.seq)
+  close(tmp.seq)
+  expect_true(enforceSequenceSyntax("tmp.seq"))
+  expect_true(file.exists("tmp.tmp.seq"));
+  data <- read.aa("tmp.tmp.seq")
+  expect_identical(row.names(data), c("TaxonNumbe","TaxonNumb0","TaxonNumb1","TaxonNumb2","TaxonNumb3"))
+  
   did.remove <- file.remove(c("tmp.seq","tmp.tree","tmp.tmp.seq","tmp.tmp.tree"))
 })
 

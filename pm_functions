@@ -334,27 +334,54 @@ nexusHeader <- function(fname,lines) {
 
 # enforceSequenceSyntax(seqfile) : checks if a sequence file has the correct formatting (10 characters per taxon name) and outputs a fixed one if it doesn't
 enforceSequenceSyntax <- function(seqfile,treefile=NULL) {
-  output <- FALSE
-  data <- read.aa(seqfile)
-  names <- row.names(data)
-  row.names(data) <- unlist(lapply(names, function(name){ 
-    if(nchar(name) < 10) {
-      output <<- TRUE
-      return(paste0(name,paste(rep("0",10-nchar(name)),collapse="")))
-    }  
-    else if(nchar(name) > 10) {
-      output <<- TRUE
-      return(substr(name,1,10))
-    }
-    else return(name)
+  f <- file(seqfile); l <- readLines(f); close(f)
+  header <- l[1]; l <- l[-1]; trail <- NULL; ntaxa <- as.numeric(unlist(strsplit(header," "))[1])
+  if(length(l) > ntaxa) { # if we're in interleaved format
+    trail <- l[-seq(1:ntaxa)]; l <- l[1:ntaxa]
+  }
+  names <- unlist(lapply(l,function(line){
+    return(unlist(strsplit(line," "))[1])
   }))
+  new.names <- vector()
+  for(name in names){ 
+    if(nchar(name) < 10) { # less than 10 chars, simply pad with zeroes
+      new.names <- append(new.names,paste0(name,paste(rep("0",10-nchar(name)),collapse="")))
+    }  
+    else if(nchar(name) > 10) { # more than 10 chars, need to truncate and check for duplicates
+      tmp.name <- substr(name,1,10)
+      n <- 0; tmp <- tmp.name; loop <- (tmp.name %in% new.names)
+      while(loop) { # duplicate truncation
+        n.digits <- nchar(as.character(n))
+        tmp <- paste0(substr(tmp.name,1,10-n.digits),n) # add number to the end until we don't have a duplicate
+        if(tmp %in% new.names) {
+          n <- n+1
+        } else {
+          tmp.name <- tmp
+          break
+        }
+      }
+      new.names <- append(new.names,tmp.name)
+    } else new.names <- append(new.names,name)
+  }
+  output <- !identical(names,new.names)
   if(output) {
-    seq <- phyDat(data, type="AA")
-    write.phyDat(seq, addPrefixToFile(seqfile,"tmp."), format = "phylip")
+    fname <- addPrefixToFile(seqfile,"tmp.")
+    new.l <- c(header)
+    for(i in 1:length(l)){
+      line <- l[i]; seq <- paste(unlist(strsplit(line," "))[-1],collapse=" ")
+      new.l <- append(new.l, paste(new.names[i], seq))
+    }
+    if(!is.null(trail)) { # add remaining lines if they exist (from interleaved)
+      for(line in trail)
+        new.l <- append(new.l, line)
+    }
+    f <- file(fname,"w+")
+    writeLines(new.l, f); close(f)
+    
     if(!is.null(treefile)){
       t <- read.tree(treefile)
       index.order <- match(names, t$tip.label)
-      t.names <- row.names(data)[order(index.order)]
+      t.names <- new.names[order(index.order)]
       t$tip.label <- t.names
       write.tree(t,file=addPrefixToFile(treefile,"tmp."))
     }
@@ -372,4 +399,16 @@ addPrefixToFile <- function(file,pref) {
     filename <- paste0(substr(file,1,loc),pref,substr(file,loc+1,nchar(file)))
   } else filename<-paste0(pref,file)
   return(filename)
+}
+
+# utility name functions
+getSeqNames <- function(seqfile) {
+  f <- file(seqfile); l <- readLines(f)[-1]; close(f)
+  return(unlist(lapply(l, function(line){
+    return(unlist(strsplit(line," "))[1])
+  })))
+}
+getTreeNames <- function(treefile) {
+  t <- read.tree(treefile)
+  return(t$tip.label)
 }

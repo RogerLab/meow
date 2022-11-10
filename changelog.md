@@ -1,3 +1,11 @@
+#### v0.5.4 2022-11-10
+- Added option to manually specify sequence file partitions via -sl and -sh flags
+- Fixed bugs in the "enforceSequenceSyntax" routine introduced in the last version
+	- It would naively truncate taxa that are >10 characters, but this lead to duplicates
+		- Now it adds numbers to the end to prevent duplicates
+	- There were issues with exporting via PhyDat, so now it manually edits the file
+		- Consequently, the function had to be edited to also account for interleaved format
+
 #### v0.5.3 2022-10-11
 - Made program check for incompatible sequence files (taxa names with less than or fewer than 10 characters)
 	- Will generate a new sequence file if the provided one is incompatible, instead of crashing
