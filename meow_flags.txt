@@ -1,5 +1,5 @@
-PM is an extension of MAMMaL, and some input flags are different. 
-Here is a list of all flags accepted by PM and whether or not they are required:
+MEOW is an extension of MAMMaL, and some input flags are different. 
+Here is a list of all flags accepted by MEOW and whether or not they are required:
 
 -s seqfile (required*) : name of input sequence file 
 
@@ -38,9 +38,9 @@ Here is a list of all flags accepted by PM and whether or not they are required:
 -log log_type (optional) : method to use for outputting program  logs (Default: "B")
 	accepted values:
 	"N" : Do not output any logs
-	"F" : Output logs to "pm_output.log"
+	"F" : Output logs to "meow_output.log"
 	"X" : Include program logs in the .nex file
-	"B" : Put logs in both "pm_output.log" and the output .nex file
+	"B" : Put logs in both "meow_output.log" and the output .nex file
 
 -lm min_weight (optional) : sets the minimum likelihood weight (Default: 1.0e-10)
 

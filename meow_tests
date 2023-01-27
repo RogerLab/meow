@@ -1,15 +1,15 @@
 #!/usr/bin/env Rscript
 ##------------------------------------------------------------------------------
 
-source("pm_functions")
+source("meow_functions")
 library(testthat)
 library(phangorn)
 options(warn=1)
 
-if(!file.exists("pmsf-2-seqfile")) stop("Must provide pmsf-2-seqfile")
-seqfile <- "pmsf-2-seqfile"
+if(!file.exists("test.phy")) stop("Must provide test.phy")
+seqfile <- "test.phy"
 
-# unit tests for PM functions
+# unit tests for MEOW functions
 
 test_that("GetEntropy",{
   # zero entropy
@@ -161,9 +161,9 @@ test_that("SortSequenceFile",{
   did.remove <- file.remove(newfile)
   
   # check a random permutation to see if we get the same order
-  if(file.exists("pmsf-2-seqfile-shuffled")){
-    sortSequenceFile("pmsf-2-seqfile-shuffled",suffix="321")
-    d3 <- read.aa("pmsf-2-seqfile-shuffled.s321")
+  if(file.exists("test_shuffled.phy")){
+    sortSequenceFile("test_shuffled.phy",suffix="321")
+    d3 <- read.aa("test_shuffled.phy.s321")
     sitesnew_2 <- apply(d3, 2, function(x){return(paste0(x,collapse=""))})
     matches <- apply(d1, 2, function(x){return(paste0(x,collapse="") %in% sitesnew_2)})
     expect_false(FALSE %in% matches)
@@ -185,8 +185,8 @@ test_that("SortSequenceFile",{
     }
     expect_true(valid)
     expect_lt(differences/length(sitesnew), 0.25) # arbitrary threshold: expect at least 75% of the sites to be a match
-    did.remove <- file.remove("pmsf-2-seqfile-shuffled.s321")
-  } else warning("Cannot run permutation test on SortSequenceFile: pmsf-2-seqfile-shuffled does not exist")
+    did.remove <- file.remove("test_shuffled.phy.s321")
+  } else warning("Cannot run permutation test on SortSequenceFile: test_shuffled.phy does not exist")
   
 }) 
 

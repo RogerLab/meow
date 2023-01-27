@@ -8,12 +8,12 @@ require("ape",quietly=TRUE)
 require("phangorn",quietly=TRUE)
 require("quadprog",quietly=TRUE)
 
-# Make sure mammal_functions and pm_functions are in the same directory as this program
+# Make sure mammal_functions and meow_functions are in the same directory as this program
 source(paste0(functions.dir,"mammal_functions")) 
-source(paste0(functions.dir,"pm_functions"))
+source(paste0(functions.dir,"meow_functions"))
 
 ##------------------------------------------------------------------------------
-## PM (MAMMaL Extension for Entropy and Rates) - adds Entropy, Upper/Lower partitions, Invariable flag, and includes low rates
+## MEOW (MAMMaL Extension Over Whole-alignments) - adds Entropy, Upper/Lower partitions, Invariable flag, and includes low rates
 
 ## External programs
 dgpe <- paste(bindir,"dgpe",sep="")
@@ -238,7 +238,7 @@ if(!is.null(seqfile)) { # skip this block if we're using preset partitions (won'
 }
 
 total.classes <- (nclass[1]+ifelse(nclass[1]>0,ifelse(plusF,1,0),0))+(nclass[2]+ifelse(nclass[2]>0,ifelse(plusF,1,0),0))+ifelse(add.invar.class,1,0)
-Log(paste("Running PM with the following parameters:\n",
+Log(paste("Running MEOW with the following parameters:\n",
           ifelse(is.null(seqfile), 
                  paste0(
                    ifelse(is.null(seq.high),"",paste("High partition sequence file:",seq.high,"\n")),
@@ -452,7 +452,7 @@ if(output){
 
 # Write log file
 if(log.method == "file" | log.method == "both") {
-  fname <- paste0("pm_output",file.suffix,".log")
+  fname <- paste0("meow_output",file.suffix,".log")
   if(file.exists(fname)){
     logfile <- file(fname)
     oldLines <- readLines(fname)
