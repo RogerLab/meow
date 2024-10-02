@@ -173,7 +173,9 @@ enabled via the -e flag.)
 MEOW is not currently supported on Windows machines due to incompatibility. It was developed and tested on a
 remote Linux shell, so that is the recommended run environment. It has also been tested to work on MacOS.
 
-It is recommended to first install MAMMaL following the instructions in Susko (2022). MEOW comes with three files:
+**Note:** Currently, MEOW requires the R package phangorn v2.11.1. This version is no longer in the CRAN but can be found here: [link](https://packages.guix.gnu.org/packages/r-phangorn/2.11.1/). An update will be eventually coming supporting the most recent version of phangorn.
+
+It is recommended to first install MAMMaL following the instructions in Susko (2022) (see this [link](https://www.mathstat.dal.ca/~tsusko/doc/mammal.pdf)), and the R package phangorn v2.11.1. MEOW comes with three files:
 meow, meow_functions, and mammal_functions. These must all be placed in the same directory, and should also be in
 the same folder as MAMMaL, dgpe, and the rest of the binaries. If the binaries are not in the same folder as the
 program, and not in your PATH, replace the line `bindir <- ""` at the top of the program to
