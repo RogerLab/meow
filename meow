@@ -351,7 +351,7 @@ for(i in 1:2) {
       lw[lw<=min.lwt] <- 0
       a <- nt*(1-min.lwt)/sum(lw)
       return(a*lw + min.lwt)
-    }
+    }else{return(lw)}
   }
   lwt[[i]] <- zeroWeights(lwt[[i]],ntaxa[i])
   write(format(lwt[[i]],sci=TRUE,digits=16),ncol=1,file=file.format("tmp.lwt",i))
