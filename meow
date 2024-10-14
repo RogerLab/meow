@@ -265,7 +265,7 @@ if(!is.null(seq.high)) {
   count <- seqCount(seq.high); Log(paste("HIGH PARTITION -- Number of sequences:",count[1],";","Number of sites:",count[2]))
 }
 if(!is.null(seq.low)) {
-  count <- seqCount(seq.high); Log(paste("LOW PARTITION -- Number of sequences:",count[1],";","Number of sites:",count[2]))
+  count <- seqCount(seq.low); Log(paste("LOW PARTITION -- Number of sequences:",count[1],";","Number of sites:",count[2]))
 }
 
 if(!is.null(seqfile)) { # don't do any of the partition and pre-processing stuff if using manual partitions
