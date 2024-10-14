@@ -120,7 +120,7 @@ time. (As of ver0.5.1, this must be enabled via the -sort flag.)
 
 **Cluster algorithm**
 
-MEOW uses hierarchical clustering by default, unless rates are being used and both `num_classes_high` and
+MEOW uses hierarchical clustering by default, unless rates are being used (-p R) and both `num_classes_high` and
 `num_classes_low` are in {0, 10, 20, ... 60}  - in which case the C-series algorithm will be used. This is so that the
 default behavior for MAMMaL can be preserved when using rates. The  `-f` flag can be used to force a given
 clustering algorithm under any circumstance. In MAMMaL, the  `-h` flag is used to force hierarchical clustering.
