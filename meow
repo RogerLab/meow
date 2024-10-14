@@ -312,11 +312,11 @@ if(!is.null(seqfile)) { # don't do any of the partition and pre-processing stuff
     expectedFiles[1] <- file.format(seqfile,".highrate")
     expectedFiles[2] <- file.format(seqfile,".lowrate")
   } else if(partition.mode == "E") {
-    partition(seqfile,func = getEntropy, suffix=file.suffix)
+    partition(seqfile,q,func = getEntropy, suffix=file.suffix)
     expectedFiles[1] <- file.format(seqfile,".highentropy")
     expectedFiles[2] <- file.format(seqfile,".lowentropy")
   } else if(partition.mode == "K") {
-    partition(seqfile,func = getEffectiveK, suffix=file.suffix)
+    partition(seqfile,q,func = getEffectiveK, suffix=file.suffix)
     expectedFiles[1] <- file.format(seqfile,".highkeff")
     expectedFiles[2] <- file.format(seqfile,".lowkeff")
   }
