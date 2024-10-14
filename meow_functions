@@ -12,6 +12,99 @@ getEntropy <- function(v)
   return(sum(-v * log(v)))
 }
 
+# read.aa(v) : this is the old fundtion read.aa() from phangorn version 2.11.1 this function was deprecated in version 2.12.1
+read.aa <- function(file, format = "interleaved", skip = 0, nlines = 0, 
+                    comment.char = "#", seq.names = NULL) 
+{
+  getTaxaNames <- function(x) {
+    x <- sub("^ +", "", x)
+    x <- sub(" +$", "", x)
+    x <- sub("^['\"]", "", x)
+    x <- sub("['\"]$", "", x)
+    x
+  }
+  format <- match.arg(format, c("interleaved", "sequential", 
+                                "fasta"))
+  phylip <- if (format %in% c("interleaved", "sequential")) 
+    TRUE
+  else FALSE
+  if (format == "fasta") {
+    obj <- read.FASTA(file, type = "AA")
+    return(obj)
+  }
+  X <- scan(file = file, what = character(), sep = "\n", quiet = TRUE, 
+            skip = skip, nlines = nlines, comment.char = comment.char)
+  if (phylip) {
+    fl <- X[1]
+    oop <- options(warn = -1)
+    fl.num <- as.numeric(unlist(strsplit(gsub("^ +", "", 
+                                              fl), " +")))
+    options(oop)
+    if (all(is.na(fl.num))) 
+      stop("the first line of the file must contain the dimensions of the data")
+    if (length(fl.num) != 2) 
+      stop("the first line of the file must contain TWO numbers")
+    else {
+      n <- fl.num[1]
+      s <- fl.num[2]
+    }
+    X <- X[-1]
+    obj <- vector("character", n * s)
+    dim(obj) <- c(n, s)
+  }
+  if (format == "interleaved") {
+    fl <- X[1]
+    fl <- unlist(strsplit(fl, NULL))
+    bases <- grep("[-AaRrNnDdCcQqEeGgHhIiLlKkMmFfPpSsTtWwYyVvBbZzXx?]", 
+                  fl)
+    z <- diff(bases)
+    for (i in seq_along(z)) if (all(z[i:(i + 8)] == 1)) 
+      break
+    start.seq <- bases[i]
+    if (is.null(seq.names)) 
+      seq.names <- getTaxaNames(substr(X[1:n], 1, start.seq - 
+                                         1))
+    X[1:n] <- substr(X[1:n], start.seq, nchar(X[1:n]))
+    X <- gsub(" ", "", X)
+    nl <- length(X)
+    for (i in 1:n) obj[i, ] <- unlist(strsplit(X[seq(i, nl, 
+                                                     n)], NULL))
+  }
+  if (format == "sequential") {
+    fl <- X[1]
+    taxa <- character(n)
+    j <- 1
+    for (i in 1:n) {
+      bases <- grep("[-AaRrNnDdCcQqEeGgHhIiLlKkMmFfPpSsTtWwYyVvBbZzXx?]", 
+                    unlist(strsplit(X[j], NULL)))
+      z <- diff(bases)
+      for (k in seq_along(z)) if (all(z[k:(k + 8)] == 1)) 
+        break
+      start.seq <- bases[k]
+      taxa[i] <- substr(X[j], 1, start.seq - 1)
+      sequ <- substr(X[j], start.seq, nchar(X[j]))
+      sequ <- gsub(" ", "", sequ)
+      j <- j + 1
+      while (nchar(sequ) < s) {
+        sequ <- paste0(sequ, gsub(" ", "", X[j]))
+        j <- j + 1
+      }
+      obj[i, ] <- unlist(strsplit(sequ, NULL))
+    }
+    if (is.null(seq.names)) 
+      seq.names <- getTaxaNames(taxa)
+  }
+  if (phylip) {
+    rownames(obj) <- seq.names
+    obj <- tolower(obj)
+  }
+  else {
+    names(obj) <- seq.names
+    obj <- lapply(obj, tolower)
+  }
+  obj
+}
+
 # getEffectiveK(v) : returns the effective number (K_eff) of items in a list based on their proportions
 # e.g. [0.5,0.5,0,0] returns 2, and [0.25,0.25,0.25,0.25] returns 4
 getEffectiveK <- function(v)
