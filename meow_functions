@@ -107,6 +107,7 @@ read.aa <- function(file, format = "interleaved", skip = 0, nlines = 0,
 
 # getEffectiveK(v) : returns the effective number (K_eff) of items in a list based on their proportions
 # e.g. [0.5,0.5,0,0] returns 2, and [0.25,0.25,0.25,0.25] returns 4
+# https://bayesiancook.blogspot.com/2016/12/the-effective-number-of-amino-acids-per.html
 getEffectiveK <- function(v)
 {
   v <- v/sum(v) # get proportion of each v[i] 
