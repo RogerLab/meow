@@ -8,6 +8,10 @@ Here is a list of all flags accepted by MEOW and whether or not they are require
 	"E" : partition by entropy
 	"R" : partition by rates (method used in MAMMaL)
 	"K" : partition by K-eff value
+	"IQ" : partiton by rate from user-provided rate file from IQtree output.
+
+-iqrates name of an IQtree rate file to partition the sequence data (such a file is obtained from IQtree when using the flag -wsr)
+		Only used when the partition type is "IQ"
 
 -t treefile (optional) : name of input tree file 
 	if not set and partition type is "R", a neighbour joining tree will be generated using the LG algorithm
