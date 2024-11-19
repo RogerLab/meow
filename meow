@@ -266,13 +266,13 @@ Log(paste("Running MEOW with the following parameters:\n",
 
 # Count and output number of sequences and sites in the sequence file(s)
 if(!is.null(seqfile)) {
-  count <- seqCount(seqfile); Log(paste("Number of sequences:",count[1],";","Number of sites:",count[2]))
+  count <- seqCount(seqfile); Log(paste0("Number of sequences:",count[1],"; ","Number of sites:",count[2]))
 }
 if(!is.null(seq.high)) {
-  count <- seqCount(seq.high); Log(paste("HIGH PARTITION -- Number of sequences:",count[1],";","Number of sites:",count[2]))
+  count <- seqCount(seq.high); Log(paste0("HIGH PARTITION -- Number of sequences:",count[1],"; ","Number of sites:",count[2]))
 }
 if(!is.null(seq.low)) {
-  count <- seqCount(seq.low); Log(paste("LOW PARTITION -- Number of sequences:",count[1],";","Number of sites:",count[2]))
+  count <- seqCount(seq.low); Log(paste0("LOW PARTITION -- Number of sequences:",count[1],"; ","Number of sites:",count[2]))
 }
 
 if(!is.null(seqfile)) { # don't do any of the partition and pre-processing stuff if using manual partitions
