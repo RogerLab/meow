@@ -1,4 +1,4 @@
-# MEOW: Version 0.5.4
+# MEOW: Version 0.6.4
 
 ### Introduction
 
@@ -27,27 +27,29 @@ are listed below.
 
 **-s seqfile** : The input sequence file, adhering toPHYLIP conventions. Can be sequential or interleaved.
 
-**-c number_of_classes** : How many frequency classesto use for both the upper and lower partitions.
+**-c number_of_classes** : How many frequency classes to use for both the upper and lower partitions.
 *NOTE: If using -cl and -ch, do not set this flag.*
 
-**-cl num_classes_low** : Number of frequency classesfor the low partition. Use 0 for no low partition.
+**-cl num_classes_low** : Number of frequency classes for the low partition. Use 0 for no low partition.
 
-**-ch num_classes_low** : Number of frequency classesfor the high partition. Use 0 for no high partition.
+**-ch num_classes_low** : Number of frequency classes for the high partition. Use 0 for no high partition.
 
-**-t treefile** : The name of the tree file to be usedfor calculating rates data. Not needed if rates are not
+**-t treefile** : The name of the tree file to be used for calculating rates data. Not needed if rates are not
 being used. If rates are used and this is not specified, a default tree will be generated.
 
 **-p partition_type** : How to split the data betweenlow and high partitions.**DEFAULT:** Entropy
-Accepted values: “E” → Entropy; “R” → Rates, “K” → K<sub>eff</sub> (Effective number of Amino Acids)
+Accepted values: “E” → Entropy; “R” → Rates, “K” → K<sub>eff</sub> (Effective number of Amino Acids), “IQ” → Rates from an IQtree rate file provided by the user,
 
-**-f cluster_type** : Clustering method to use when calculatingthe starting frequencies. **DEFAULT:** H-clust*
+**-iqrates** : The name of the IQtree rate file to be used for partition the data. Only required and used if partition type -p is “IQ”
+
+**-f cluster_type** : Clustering method to use when calculating the starting frequencies. **DEFAULT:** H-clust*
 Accepted values: “H” → Hierarchical clustering (H-clust); “C” → C-series frequencies of Le et. al. (2008)
 
 \* This defaults to C-series instead if both num_classes_low and num_classes_high are in {0, 10, 20, ... , 60}.
 
 **-o output_file** : Name of the output Nexus file. **DEFAULT:** “esmodel”
 
-**-q quantile** : The quantile at which to split the data,determined from calculated values using the partition type. **DEFAULT:** 0.75.
+**-q quantile** : The quantile at which to split the data, determined from calculated values using the partition type. **DEFAULT:** 0.75.
 
 **-C penalty** : The penalty parameter, η in Susko, Linckerand Roger (2018). **DEFAULT:** η = 1.0e-10.
 
