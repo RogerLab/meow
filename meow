@@ -6,6 +6,7 @@ functions.dir <- ""
 
 require("ape",quietly=TRUE)
 require("phangorn",quietly=TRUE)
+# library(phangorn, lib.loc = '/misc/home/hectorb/R/x86_64-pc-linux-gnu-library/4.2')
 require("quadprog",quietly=TRUE)
 
 # Make sure mammal_functions and meow_functions are in the same directory as this program
@@ -29,7 +30,7 @@ args <- commandArgs()
 iarg <- length(args)
 
 nclass <- c(NULL,NULL) # number of classes ([1] = high partition, [2] = low partition)
-seqfile <- seq.low <- seq.high <- treefile <- classfile <- NULL
+seqfile <- seq.low <- seq.high <- treefile <- classfile <- iqrates <- NULL
 outfile <- "esmodel" # name of output .nex file
 file.suffix <- ""
 q <- 0.75 # quantile for rate estimation
@@ -63,6 +64,10 @@ while(iarg>=6){
   if(opt=="-sh"){
     if(is.null(val)) stop("high partition sequence file not specified in -sh seqfile")
     seq.high <- FnameE(val); not.an.option <- FALSE
+  }
+  if(opt=="-iqrates"){#HB
+    if(is.null(val)) stop("IQtree rate file not specified in -iqrates seqfile")
+    iqrates <- FnameE(val); not.an.option <- FALSE
   }
   if(opt=="-t"){
     if(is.null(val)) stop("treefile not specified in -t treefile")
@@ -112,7 +117,7 @@ while(iarg>=6){
   if(opt=="-p"){
     if(is.null(val)) stop("partition mode not specified in -p mode")
     val <- toupper(val)
-    if(!val %in% c("E","R","K")) stop(paste0("invalid partition mode (",val,"); valid modes are: E (entropy), R (rates), K (k_eff)"))
+    if(!val %in% c("E","R","K","IQ")) stop(paste0("invalid partition mode (",val,"); valid modes are: E (entropy), R (rates), K (k_eff), IQ (IQtree rates via -iqrates)"))
     partition.mode <- val; not.an.option <- FALSE
   }
   if(opt=="-f"){
@@ -172,6 +177,7 @@ if(!is.null(classfile)) {
   if(length(classes) != expected) stop(paste("class file contains",length(classes),"data points, but was expected to have",expected))
   classes <- matrix(classes,nrow=(nclass[1]+nclass[2]),ncol=20)
 }
+if(is.null(iqrates) & partition.mode=="IQ") stop("IQtree rate file needed: -iqrates rate file from IQtree (use -wsr in IQtree)")#HB
 
 # start timer
 T1 <- Sys.time()
@@ -246,7 +252,8 @@ Log(paste("Running MEOW with the following parameters:\n",
                  paste0("Sequence file: ",seqfile,"\t")),
           ifelse(is.null(treefile),"",paste("Tree file: ",treefile)),"\n",
           "Output file: ",paste0(outfile,".nex (Total number of classes: ",total.classes,")"),"\n",
-          "Partition mode: ",ifelse(partition.mode=="R","Rates",""),ifelse(partition.mode=="E","Entropy",""),ifelse(partition.mode=="K","K_eff",""),"\n",
+          "Partition mode: ",ifelse(partition.mode=="R","Rates",""),ifelse(partition.mode=="E","Entropy",""),ifelse(partition.mode=="K","K_eff",""),
+          ifelse(partition.mode=="IQ",paste0("IQtree rates provided"," ",iqrates),""),"\n",
           "High partition classes: ",nclass[1],"\tLow partition classes: ",nclass[2],"\n",
           "Quantile: ",q,"\tCluster type: ",start.frs.type,"\tPenalty: ",C,"\n",
           ifelse(!is.null(classfile),paste0("Provided class file: ",classfile," (Will be used instead of clustering)\n"),""),
@@ -319,6 +326,12 @@ if(!is.null(seqfile)) { # don't do any of the partition and pre-processing stuff
     partition(seqfile,q,func = getEffectiveK, suffix=file.suffix)
     expectedFiles[1] <- file.format(seqfile,".highkeff")
     expectedFiles[2] <- file.format(seqfile,".lowkeff")
+  } else if(partition.mode == "IQ") {
+    convertIQtreeRatefile(iqrates)
+    extractLowRates(seqfile,"iqtreerate_out.rate",q,suffix=file.suffix)
+    extractHighRates(seqfile,"iqtreerate_out.rate",q,suffix=file.suffix)
+    expectedFiles[1] <- file.format(seqfile,".highrate")
+    expectedFiles[2] <- file.format(seqfile,".lowrate")
   }
 
 } else {
