@@ -40,7 +40,8 @@ being used. If rates are used and this is not specified, a default tree will be 
 **-p partition_type** : How to split the data between low and high partitions.**DEFAULT:** Entropy
 Accepted values: “E” → Entropy; “R” → Rates, “K” → K<sub>eff</sub> (Effective number of Amino Acids), “IQ” → Rates from an IQtree rate file provided by the user,
 
-**-iqrates** : The name of the IQtree rate file to be used for partitioning the data. Only required and used if partition type -p is “IQ”
+**-iqrates** : The name of the IQtree rate file to be used for partitioning the data. Only required and used if partition type -p is “IQ”.
+This file is obtained from IQtree after running IQtree under a rates model (for eg. +G4) using the flag -wsr
 
 **-f cluster_type** : Clustering method to use when calculating the starting frequencies. **DEFAULT:** H-clust*
 Accepted values: “H” → Hierarchical clustering (H-clust); “C” → C-series frequencies of Le et. al. (2008)
