@@ -178,6 +178,8 @@ if(!is.null(classfile)) {
   classes <- matrix(classes,nrow=(nclass[1]+nclass[2]),ncol=20)
 }
 if(is.null(iqrates) & partition.mode=="IQ") stop("IQtree rate file needed: -iqrates rate file from IQtree (use -wsr in IQtree)")
+if(!is.null(iqrates) & partition.mode!="IQ") stop("-iqrates flag should not be used when -p is not IQ.")
+
 
 # start timer
 T1 <- Sys.time()
