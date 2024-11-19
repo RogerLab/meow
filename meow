@@ -65,7 +65,7 @@ while(iarg>=6){
     if(is.null(val)) stop("high partition sequence file not specified in -sh seqfile")
     seq.high <- FnameE(val); not.an.option <- FALSE
   }
-  if(opt=="-iqrates"){#HB
+  if(opt=="-iqrates"){
     if(is.null(val)) stop("IQtree rate file not specified in -iqrates seqfile")
     iqrates <- FnameE(val); not.an.option <- FALSE
   }
@@ -177,7 +177,7 @@ if(!is.null(classfile)) {
   if(length(classes) != expected) stop(paste("class file contains",length(classes),"data points, but was expected to have",expected))
   classes <- matrix(classes,nrow=(nclass[1]+nclass[2]),ncol=20)
 }
-if(is.null(iqrates) & partition.mode=="IQ") stop("IQtree rate file needed: -iqrates rate file from IQtree (use -wsr in IQtree)")#HB
+if(is.null(iqrates) & partition.mode=="IQ") stop("IQtree rate file needed: -iqrates rate file from IQtree (use -wsr in IQtree)")
 
 # start timer
 T1 <- Sys.time()
