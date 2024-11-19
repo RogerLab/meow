@@ -3,7 +3,7 @@
 
 # List of amino acids for use in the program (shorthand: AA)
 AminoAcids <- AA <- c("a","r","n","d","c","q","e","g","h","i","l","k","m","f","p","s","t","w","y","v")
-
+library(phangorn)
 # getEntropy(v) : returns the entropy value for a vector set v
 # entropy is defined as -sum(v * log(v))
 getEntropy <- function(v)
@@ -107,7 +107,6 @@ read.aa <- function(file, format = "interleaved", skip = 0, nlines = 0,
 
 # getEffectiveK(v) : returns the effective number (K_eff) of items in a list based on their proportions
 # e.g. [0.5,0.5,0,0] returns 2, and [0.25,0.25,0.25,0.25] returns 4
-# https://bayesiancook.blogspot.com/2016/12/the-effective-number-of-amino-acids-per.html
 getEffectiveK <- function(v)
 {
   v <- v/sum(v) # get proportion of each v[i] 
@@ -241,7 +240,7 @@ sortSequenceFile <- function(seqfile,suffix="")
 }
 
 # extractLowRates(seqfile,rates,quant) : given a sequence file, rates file and quantile, output a new sequence file with only the low rates
-# relies on the existence of the rates file which is created by dgpe
+# relies on the existence of the rates file which is created by dgpe or IQtree file converted by the function convertIQtreeRatefile
 extractLowRates <- function(seqfile,rates,quant,suffix="")
 {
   outfile <- paste0(removeSuffix(seqfile,suffix),".lowrate",suffix)
@@ -250,6 +249,26 @@ extractLowRates <- function(seqfile,rates,quant,suffix="")
     q <- quantile(TT,quant)
     lowSites <- which(TT<q)
   
+    data <- read.aa(seqfile)
+    data <- data[,lowSites]
+    seq <- phyDat(data, type = "AA")
+    write.phyDat(seq,file = outfile,format = "interleaved", nbcol = 6, colsep = " ")
+  } else {
+    out <- file(outfile)
+    writeLines("0 0",out)
+    close(out)
+  }
+}
+# extractHighRates(seqfile,rates,quant) : given a sequence file, rates file and quantile, output a new sequence file with only the high rates
+# relies on the existence of the rates file which is created by dgpe or IQtree file converted by the function convertIQtreeRatefile
+extractHighRates <- function(seqfile,rates,quant,suffix="") #HB
+{
+  outfile <- paste0(removeSuffix(seqfile,suffix),".highrate",suffix)
+  if(quant > 0) {
+    TT <- unlist(as.vector(read.table(file=rates)))
+    q <- quantile(TT,quant)
+    lowSites <- which(TT>=q)
+    
     data <- read.aa(seqfile)
     data <- data[,lowSites]
     seq <- phyDat(data, type = "AA")
@@ -505,4 +524,10 @@ getSeqNames <- function(seqfile) {
 getTreeNames <- function(treefile) {
   t <- read.tree(treefile)
   return(t$tip.label)
+}
+# convertIQtreeRatefile(seqfile,output) : Convert the output of the iqtree rate file to dgpe output format rate file
+convertIQtreeRatefile <- function(ratefile)
+{
+  tab=read.table(ratefile, header=TRUE)
+  write.table(tab[2], file='iqtreerate_out.rate', row.names=FALSE, col.names=FALSE)
 }
