@@ -35,9 +35,9 @@ are listed below.
 **-ch num_classes_low** : Number of frequency classes for the high partition. Use 0 for no high partition.
 
 **-t treefile** : The name of the tree file to be used for calculating rates data. Not needed if rates are not
-being used. If rates are used and this is not specified, a default tree will be generated.
+being used (eg, entropy is used instead) or supplied by the user. If rates are used and this is not specified, a default tree will be generated.
 
-**-p partition_type** : How to split the data between low and high partitions.**DEFAULT:** Entropy
+**-p partition_type** : How to split the data between low and high partitions.**DEFAULT:** Entropy. 
 Accepted values: “E” → Entropy; “R” → Rates, “K” → K<sub>eff</sub> (Effective number of Amino Acids), “IQ” → Rates from an IQtree rate file provided by the user,
 
 **-iqrates** : The name of the IQtree rate file to be used for partitioning the data. Only required and used if partition type -p is “IQ”.
