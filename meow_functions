@@ -261,16 +261,16 @@ extractLowRates <- function(seqfile,rates,quant,suffix="")
 }
 # extractHighRates(seqfile,rates,quant) : given a sequence file, rates file and quantile, output a new sequence file with only the high rates
 # relies on the existence of the rates file which is created by dgpe or IQtree file converted by the function convertIQtreeRatefile
-extractHighRates <- function(seqfile,rates,quant,suffix="") #HB
+extractHighRates <- function(seqfile,rates,quant,suffix="") 
 {
   outfile <- paste0(removeSuffix(seqfile,suffix),".highrate",suffix)
   if(quant > 0) {
     TT <- unlist(as.vector(read.table(file=rates)))
     q <- quantile(TT,quant)
-    lowSites <- which(TT>=q)
+    HighSites <- which(TT>=q)
     
     data <- read.aa(seqfile)
-    data <- data[,lowSites]
+    data <- data[,HighSites]
     seq <- phyDat(data, type = "AA")
     write.phyDat(seq,file = outfile,format = "interleaved", nbcol = 6, colsep = " ")
   } else {
@@ -332,7 +332,7 @@ detectInvariant <- function(seqfile,output=TRUE,suffix="")
     write.phyDat(seq, filename, format = "phylip")
   }
   
-  return(list(ninvariant,n-ninvariant,invar.class))
+  return(list(ninvariant,n-ninvariant,invar.class,invariant))
 }
 
 # invariantProportions(data,invariant) : returns a frequency class for invariant sites given a phydat matrix and a set of which columns contain the invariant sites.
@@ -526,8 +526,11 @@ getTreeNames <- function(treefile) {
   return(t$tip.label)
 }
 # convertIQtreeRatefile(seqfile,output) : Convert the output of the iqtree rate file to dgpe output format rate file
-convertIQtreeRatefile <- function(ratefile)
+convertIQtreeRatefile <- function(ratefile,invariant)
 {
   tab=read.table(ratefile, header=TRUE)
-  write.table(tab[2], file='iqtreerate_out.rate', row.names=FALSE, col.names=FALSE)
+  if(length(invariant)>0){
+    write.table(tab[[2]][-invariant], file='iqtreerate_out.rate', row.names=FALSE, col.names=FALSE)
+  }else{
+  write.table(tab[2], file='iqtreerate_out.rate', row.names=FALSE, col.names=FALSE)}
 }
