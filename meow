@@ -329,7 +329,8 @@ if(!is.null(seqfile)) { # don't do any of the partition and pre-processing stuff
     expectedFiles[1] <- file.format(seqfile,".highkeff")
     expectedFiles[2] <- file.format(seqfile,".lowkeff")
   } else if(partition.mode == "IQ") {
-    convertIQtreeRatefile(iqrates)
+    if(invar==T){invariant = invar.results[[4]]}else{invariant = c()}
+    convertIQtreeRatefile(iqrates, invariant)
     extractLowRates(seqfile,"iqtreerate_out.rate",q,suffix=file.suffix)
     extractHighRates(seqfile,"iqtreerate_out.rate",q,suffix=file.suffix)
     expectedFiles[1] <- file.format(seqfile,".highrate")
