@@ -437,6 +437,12 @@ if(output){
   lowExists <- (nclass[2] > 0)
   if(highExists) {
     fr1 <- matrix(scan(file.format("estimated-frequencies1"),quiet=TRUE),ncol=20,byrow=TRUE)
+    # Very small entries can produce numerical issues, so we add a buffer so this does not happen
+    fr1[fr1 < 1e-5] <- 1e-5
+    
+    row_sums <- rowSums(fr1)
+    mat_normalized <- fr1 / row_sums
+
     CreateIQFreqfile(fr1,file.format(outfile,".high.nex"))
     if(!lowExists){
       if(add.invar.class) addInvariantClassToNexus(paste0(outfile,".high.nex"), invar.class)
@@ -445,6 +451,13 @@ if(output){
   }
   if(lowExists) {
     fr2 <- matrix(scan(file.format("estimated-frequencies2"),quiet=TRUE),ncol=20,byrow=TRUE)
+
+    # Very small entries can produce numerical issues, so we add a buffer so this does not happen
+    fr1[fr2 < 1e-6] <- 1e-6
+    
+    row_sums <- rowSums(fr2)
+    mat_normalized <- fr2 / row_sums
+
     CreateIQFreqfile(fr2,file.format(outfile,".low.nex"))
     if(!highExists){
       if(add.invar.class) addInvariantClassToNexus(paste0(outfile,".low.nex"), invar.class)
