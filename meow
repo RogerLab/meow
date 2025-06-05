@@ -449,7 +449,7 @@ if(output){
       if(log.method == "nexus" | log.method == "both") nexusHeader(file.format(outfile,".high.nex"), file.log)
     }
   }
-  if(lowExists) {
+  if(lowExists) { 
     fr2 <- matrix(scan(file.format("estimated-frequencies2"),quiet=TRUE),ncol=20,byrow=TRUE)
 
     # Very small entries can produce numerical issues, so we add a buffer so this does not happen
